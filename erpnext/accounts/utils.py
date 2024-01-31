@@ -511,9 +511,8 @@ def reconcile_against_document(
 
 		if voucher_type == "Payment Entry" and doc.book_advance_payments_in_separate_party_account:
 			# both ledgers must be posted to for `Advance` in separate account feature
-			# TODO: find a more efficient way post only for the new linked vouchers
-			for row in reposting_rows:
-				doc.make_advance_gl_entries(entry=row)
+			doc.make_advance_gl_entries(cancel=1)
+			doc.make_advance_gl_entries()
 		else:
 			_delete_pl_entries(voucher_type, voucher_no)
 			gl_map = doc.build_gl_map()
