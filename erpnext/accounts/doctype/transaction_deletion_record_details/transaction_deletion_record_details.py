@@ -11,7 +11,7 @@ class TransactionDeletionRecordDetails(Document):
 
 	from typing import TYPE_CHECKING
 
-	if TYPE_CHECKING:  # pragma: no cover
+	if TYPE_CHECKING:
 		from frappe.types import DF
 
 		docfield_name: DF.Data | None

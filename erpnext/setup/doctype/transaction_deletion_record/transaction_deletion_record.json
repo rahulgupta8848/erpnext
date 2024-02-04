@@ -14,8 +14,8 @@
   "delete_leads_and_addresses",
   "reset_company_default_values",
   "clear_notifications",
-  "delete_transactions",
   "initialize_doctypes_table",
+  "delete_transactions",
   "section_break_tbej",
   "doctypes",
   "doctypes_to_be_ignored",
@@ -34,7 +34,7 @@
    "fieldname": "doctypes",
    "fieldtype": "Table",
    "label": "Summary",
-   "options": "Transaction Deletion Record Item",
+   "options": "Transaction Deletion Record Details",
    "read_only": 1
   },
   {
@@ -123,7 +123,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-02-03 20:48:34.107577",
+ "modified": "2024-02-04 10:55:09.430373",
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "Transaction Deletion Record",
