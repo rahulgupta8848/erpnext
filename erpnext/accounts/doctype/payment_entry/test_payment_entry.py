@@ -1163,9 +1163,7 @@ class TestPaymentEntry(FrappeTestCase):
 			so.doctype, so.name, pe.paid_from_account_currency, "Customer", so.customer
 		)
 		expected_response = {
-			"account": get_party_account("Customer", so.customer, so.company),
-			"account_type": None,  # only applies for Reverse Payment Entry
-			"payment_type": None,  # only applies for Reverse Payment Entry
+			"account": pe.paid_from,
 			"total_amount": 5000.0,
 			"outstanding_amount": 5000.0,
 			"exchange_rate": 1.0,
