@@ -11,9 +11,12 @@ from pypika.functions import Coalesce
 class DeprecatedSerialNoValuation:
 	@deprecated
 	def calculate_stock_value_from_deprecarated_ledgers(self):
-		serial_nos = []
-		if hasattr(self, "old_serial_nos"):
-			serial_nos = self.old_serial_nos
+		if not frappe.db.get_value(
+			"Stock Ledger Entry", {"serial_no": ("is", "set"), "is_cancelled": 0}, "name"
+		):
+			return
+
+		serial_nos = self.get_serial_nos()
 
 		if not serial_nos:
 			return
@@ -33,12 +36,6 @@ class DeprecatedSerialNoValuation:
 		# get rate from serial nos within same company
 		incoming_values = 0.0
 		for serial_no in serial_nos:
-			sn_details = frappe.db.get_value("Serial No", serial_no, ["purchase_rate", "company"], as_dict=1)
-			if sn_details and sn_details.purchase_rate and sn_details.company == self.sle.company:
-				self.serial_no_incoming_rate[serial_no] += flt(sn_details.purchase_rate)
-				incoming_values += self.serial_no_incoming_rate[serial_no]
-				continue
-
 			table = frappe.qb.DocType("Stock Ledger Entry")
 			stock_ledgers = (
 				frappe.qb.from_(table)
@@ -53,7 +50,6 @@ class DeprecatedSerialNoValuation:
 					& (table.company == self.sle.company)
 					& (table.warehouse == self.sle.warehouse)
 					& (table.serial_and_batch_bundle.isnull())
-					& (table.actual_qty > 0)
 					& (table.is_cancelled == 0)
 					& (
 						table.posting_datetime
@@ -61,11 +57,14 @@ class DeprecatedSerialNoValuation:
 					)
 				)
 				.orderby(table.posting_datetime, order=Order.desc)
-				.limit(1)
 			).run(as_dict=1)
 
 			for sle in stock_ledgers:
-				self.serial_no_incoming_rate[serial_no] += flt(sle.incoming_rate)
+				self.serial_no_incoming_rate[serial_no] += (
+					flt(sle.incoming_rate)
+					if sle.actual_qty > 0
+					else (sle.stock_value_difference / sle.actual_qty) * -1
+				)
 				incoming_values += self.serial_no_incoming_rate[serial_no]
 
 		return incoming_values
