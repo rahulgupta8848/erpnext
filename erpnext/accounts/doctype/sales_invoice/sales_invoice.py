@@ -695,6 +695,13 @@ class SalesInvoice(SellingController):
 		for payment in self.payments:
 			payment.account = get_bank_cash_account(payment.mode_of_payment, self.company).get("account")
 
+	def validate_time_sheets_are_submitted(self):
+		for data in self.timesheets:
+			if data.time_sheet:
+				status = frappe.db.get_value("Timesheet", data.time_sheet, "status")
+				if status not in ["Submitted", "Payslip"]:
+					frappe.throw(_("Timesheet {0} is already completed or cancelled").format(data.time_sheet))
+
 	def set_pos_fields(self, for_validate=False):
 		"""Set retail related fields from POS Profiles"""
 		if cint(self.is_pos) != 1:
