@@ -3,11 +3,9 @@ from collections import defaultdict
 import frappe
 from frappe import _, bold
 from frappe.model.naming import make_autoname
-from frappe.query_builder import Case
 from frappe.query_builder.functions import CombineDatetime, Sum, Timestamp
-from frappe.utils import add_days, cint, cstr, flt, get_link_to_form, now, nowtime, today
-from pypika import Order , functions as fn
-from pypika.terms import ExistsCriterion
+from frappe.utils import cint, cstr, flt, get_link_to_form, now, nowtime, today
+from pypika import Order
 
 from erpnext.stock.deprecated_serial_batch import (
 	DeprecatedBatchNoValuation,
@@ -595,13 +593,11 @@ class SerialNoValuation(DeprecatedSerialNoValuation):
 		else:
 			self.serial_no_incoming_rate = defaultdict(float)
 			self.stock_value_change = 0.0
-			self.old_serial_nos = []
 
 			serial_nos = self.get_serial_nos()
 			for serial_no in serial_nos:
 				incoming_rate = self.get_incoming_rate_from_bundle(serial_no)
 				if not incoming_rate:
-					self.old_serial_nos.append(serial_no)
 					continue
 
 				self.stock_value_change += incoming_rate
@@ -627,7 +623,7 @@ class SerialNoValuation(DeprecatedSerialNoValuation):
 				& (bundle.item_code == self.sle.item_code)
 				& (bundle_child.warehouse == self.sle.warehouse)
 			)
-			.orderby(_PostgresTimestamp(bundle.posting_date, bundle.posting_time), order=Order.desc)
+			.orderby(Timestamp(bundle.posting_date, bundle.posting_time), order=Order.desc)
 			.limit(1)
 		)
 
