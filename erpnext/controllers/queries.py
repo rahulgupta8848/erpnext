@@ -413,26 +413,16 @@ def get_batch_no(doctype, txt, searchfield, start, page_len, filters):
 	filtered_batches = get_filterd_batches(batches)
 
 	if filters.get("is_inward"):
-		filtered_batches.extend(get_empty_batches(filters, start, page_len, filtered_batches, txt))
+		filtered_batches.extend(get_empty_batches(filters))
 
 	return filtered_batches
 
 
-def get_empty_batches(filters, start, page_len, filtered_batches=None, txt=None):
-	query_filter = {"item": filters.get("item_code"), "disabled": 0}
-	if txt:
-		query_filter["name"] = ("like", f"%{txt}%")
-
-	exclude_batches = [batch[0] for batch in filtered_batches] if filtered_batches else []
-	if exclude_batches:
-		query_filter["name"] = ("not in", exclude_batches)
-
+def get_empty_batches(filters):
 	return frappe.get_all(
 		"Batch",
 		fields=["name", "batch_qty"],
-		filters=query_filter,
-		limit_start=start,
-		limit_page_length=page_len,
+		filters={"item": filters.get("item_code"), "batch_qty": 0.0},
 		as_list=1,
 	)
 
