@@ -503,6 +503,20 @@ class SerialBatchBundle:
 				.where(sn_table.name.isin(serial_nos))
 			).run()
 
+	def update_batch_qty(self):
+		from erpnext.stock.doctype.batch.batch import get_available_batches
+
+		batches = get_batch_nos(self.sle.serial_and_batch_bundle)
+		if not self.sle.serial_and_batch_bundle and self.sle.batch_no:
+			batches = frappe._dict({self.sle.batch_no: self.sle.actual_qty})
+
+		batches_qty = get_available_batches(
+			frappe._dict({"item_code": self.item_code, "batch_no": list(batches.keys())})
+		)
+
+		for batch_no in batches:
+			frappe.db.set_value("Batch", batch_no, "batch_qty", batches_qty.get(batch_no, 0))
+
 
 def get_serial_nos(serial_and_batch_bundle, serial_nos=None):
 	if not serial_and_batch_bundle:
