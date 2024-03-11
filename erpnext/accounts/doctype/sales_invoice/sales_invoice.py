@@ -1143,8 +1143,9 @@ class SalesInvoice(SellingController):
 						"debit_in_account_currency": base_grand_total
 						if self.party_account_currency == self.company_currency
 						else grand_total,
-						"debit_in_transaction_currency": grand_total,
-						"against_voucher": against_voucher,
+						"against_voucher": self.name
+						if self.is_return and self.return_against and self.update_outstanding_for_self
+						else self.return_against,
 						"against_voucher_type": self.doctype,
 						"cost_center": self.cost_center,
 						"project": self.get("project") if "projects" in frappe.get_installed_apps() else "",
