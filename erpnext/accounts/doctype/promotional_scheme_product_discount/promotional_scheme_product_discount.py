@@ -11,7 +11,7 @@ class PromotionalSchemeProductDiscount(Document):
 
 	from typing import TYPE_CHECKING
 
-	if TYPE_CHECKING:  # pragma: no cover
+	if TYPE_CHECKING:
 		from frappe.types import DF
 
 		apply_multiple_pricing_rules: DF.Check
@@ -53,7 +53,6 @@ class PromotionalSchemeProductDiscount(Document):
 			"20",
 		]
 		recurse_for: DF.Float
-		round_free_qty: DF.Check
 		rule_description: DF.SmallText
 		same_item: DF.Check
 		threshold_percentage: DF.Percent
