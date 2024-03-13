@@ -218,17 +218,18 @@ class AccountsController(TransactionBase):
 				)
 
 			if self.get("is_return") and self.get("return_against") and not self.get("is_pos"):
-				# if self.get("is_return") and self.get("return_against"):
-				document_type = "Credit Note" if self.doctype == "Sales Invoice" else "Debit Note"
-				frappe.msgprint(
-					_(
-						"{0} will be treated as a standalone {0}. Post creation use {1} tool to reconcile against {2}."
-					).format(
-						document_type,
-						get_link_to_form("Payment Reconciliation"),
-						get_link_to_form(self.doctype, self.get("return_against")),
+				if self.get("update_outstanding_for_self"):
+					document_type = "Credit Note" if self.doctype == "Sales Invoice" else "Debit Note"
+					frappe.msgprint(
+						_(
+							"We can see {0} is made against {1}. If you want {1}'s outstanding to be updated, uncheck '{2}' checkbox. <br><br> Or you can use {3} tool to reconcile against {1} later."
+						).format(
+							frappe.bold(document_type),
+							get_link_to_form(self.doctype, self.get("return_against")),
+							frappe.bold("Update Outstanding for Self"),
+							get_link_to_form("Payment Reconciliation"),
+						)
 					)
-				)
 
 			pos_check_field = "is_pos" if self.doctype == "Sales Invoice" else "is_paid"
 			if cint(self.allocate_advances_automatically) and not cint(self.get(pos_check_field)):
@@ -2707,19 +2708,13 @@ def get_advance_journal_entries(
 	else:
 		q = q.where(journal_acc.debit_in_account_currency > 0)
 
-	reference_or_condition = []
-
 	if include_unallocated:
-		reference_or_condition.append(journal_acc.reference_name.isnull())
-		reference_or_condition.append(journal_acc.reference_name == "")
+		q = q.where((journal_acc.reference_name.isnull()) | (journal_acc.reference_name == ""))
 
 	if order_list:
-		reference_or_condition.append(
+		q = q.where(
 			(journal_acc.reference_type == order_doctype) & ((journal_acc.reference_name).isin(order_list))
 		)
-
-	if reference_or_condition:
-		q = q.where(Criterion.any(reference_or_condition))
 
 	q = q.orderby(journal_entry.posting_date)
 
