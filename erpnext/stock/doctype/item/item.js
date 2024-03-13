@@ -7,35 +7,6 @@ const SALES_DOCTYPES = ["Quotation", "Sales Order", "Delivery Note", "Sales Invo
 const PURCHASE_DOCTYPES = ["Purchase Order", "Purchase Receipt", "Purchase Invoice"];
 
 frappe.ui.form.on("Item", {
-	valuation_method(frm) {
-		if (!frm.is_new() && frm.doc.valuation_method === "Moving Average") {
-			let stock_exists = frm.doc.__onload && frm.doc.__onload.stock_exists ? 1 : 0;
-			let current_valuation_method = frm.doc.__onload.current_valuation_method;
-
-			if (stock_exists && current_valuation_method !== frm.doc.valuation_method) {
-				let msg = __(
-					"Changing the valuation method to Moving Average will affect new transactions. If backdated entries are added, earlier FIFO-based entries will be reposted, which may change closing balances."
-				);
-				msg += "<br>";
-				msg += __(
-					"Also you can't switch back to FIFO after setting the valuation method to Moving Average for this item."
-				);
-				msg += "<br>";
-				msg += __("Do you want to change valuation method?");
-
-				frappe.confirm(
-					msg,
-					() => {
-						frm.set_value("valuation_method", "Moving Average");
-					},
-					() => {
-						frm.set_value("valuation_method", current_valuation_method);
-					}
-				);
-			}
-		}
-	},
-
 	setup: function (frm) {
 		frm.add_fetch("attribute", "numeric_values", "numeric_values");
 		frm.add_fetch("attribute", "from_range", "from_range");
@@ -44,9 +15,6 @@ frappe.ui.form.on("Item", {
 		frm.add_fetch("tax_type", "tax_rate", "tax_rate");
 
 		frm.make_methods = {
-			Quotation: () => {
-				open_form(frm, "Quotation", "Quotation Item", "items");
-			},
 			"Sales Order": () => {
 				open_form(frm, "Sales Order", "Sales Order Item", "items");
 			},
@@ -79,6 +47,9 @@ frappe.ui.form.on("Item", {
 			frm.fields_dict["attributes"].grid.set_column_disp("attribute_value", true);
 		}
 
+		if (frm.doc.is_fixed_asset) {
+			frm.trigger("set_asset_naming_series");
+		}
 	},
 
 	refresh: function (frm) {
@@ -113,6 +84,11 @@ frappe.ui.form.on("Item", {
 				},
 				__("View")
 			);
+		}
+
+		if (frm.doc.is_fixed_asset) {
+			frm.trigger("is_fixed_asset");
+			frm.trigger("auto_create_assets");
 		}
 
 		// clear intro
@@ -195,6 +171,10 @@ frappe.ui.form.on("Item", {
 		erpnext.item.edit_prices_button(frm);
 		erpnext.item.toggle_attributes(frm);
 
+		if (!frm.doc.is_fixed_asset) {
+			erpnext.item.make_dashboard(frm);
+		}
+
 		frm.add_custom_button(__("Duplicate"), function () {
 			var new_item = frappe.model.copy_doc(frm.doc);
 			// Duplicate item could have different name, causing "copy paste" error.
@@ -226,6 +206,36 @@ frappe.ui.form.on("Item", {
 
 	is_customer_provided_item: function (frm) {
 		frm.toggle_reqd("customer", frm.doc.is_customer_provided_item ? 1 : 0);
+	},
+
+	is_fixed_asset: function (frm) {
+		// set serial no to false & toggles its visibility
+		frm.set_value("has_serial_no", 0);
+		frm.set_value("has_batch_no", 0);
+		frm.toggle_enable(["has_serial_no", "serial_no_series"], !frm.doc.is_fixed_asset);
+
+		frappe.call({
+			method: "erpnext.stock.doctype.item.item.get_asset_naming_series",
+			callback: function (r) {
+				frm.set_value("is_stock_item", frm.doc.is_fixed_asset ? 0 : 1);
+				frm.events.set_asset_naming_series(frm, r.message);
+			},
+		});
+
+		frm.trigger("auto_create_assets");
+	},
+
+	set_asset_naming_series: function (frm, asset_naming_series) {
+		if ((frm.doc.__onload && frm.doc.__onload.asset_naming_series) || asset_naming_series) {
+			let naming_series =
+				(frm.doc.__onload && frm.doc.__onload.asset_naming_series) || asset_naming_series;
+			frm.set_df_property("asset_naming_series", "options", naming_series);
+		}
+	},
+
+	auto_create_assets: function (frm) {
+		frm.toggle_reqd(["asset_naming_series"], frm.doc.auto_create_assets);
+		frm.toggle_display(["asset_naming_series"], frm.doc.auto_create_assets);
 	},
 
 	page_name: frappe.utils.warn_page_name_change,
@@ -394,6 +404,10 @@ $.extend(erpnext.item, {
 					is_group: 0,
 				},
 			};
+		};
+
+		frm.fields_dict.customer_items.grid.get_field("customer_name").get_query = function (doc, cdt, cdn) {
+			return { query: "erpnext.controllers.queries.customer_query" };
 		};
 
 		frm.fields_dict["item_defaults"].grid.get_field("default_warehouse").get_query = function (
@@ -574,14 +588,6 @@ $.extend(erpnext.item, {
 			me.multiple_variant_dialog = new frappe.ui.Dialog({
 				title: __("Select Attribute Values"),
 				fields: [
-					frm.doc.image
-						? {
-								fieldtype: "Check",
-								label: __("Create a variant with the template image."),
-								fieldname: "use_template_image",
-								default: 0,
-						  }
-						: null,
 					{
 						fieldtype: "HTML",
 						fieldname: "help",
@@ -589,14 +595,11 @@ $.extend(erpnext.item, {
 							${__("Select at least one value from each of the attributes.")}
 						</label>`,
 					},
-				]
-					.concat(fields)
-					.filter(Boolean),
+				].concat(fields),
 			});
 
 			me.multiple_variant_dialog.set_primary_action(__("Create Variants"), () => {
 				let selected_attributes = get_selected_attributes();
-				let use_template_image = me.multiple_variant_dialog.get_value("use_template_image");
 
 				me.multiple_variant_dialog.hide();
 				frappe.call({
@@ -604,7 +607,6 @@ $.extend(erpnext.item, {
 					args: {
 						item: frm.doc.name,
 						args: selected_attributes,
-						use_template_image: use_template_image,
 					},
 					callback: function (r) {
 						if (r.message === "queued") {
@@ -650,41 +652,39 @@ $.extend(erpnext.item, {
 		}
 
 		frm.doc.attributes.forEach(function (d) {
-			if (!d.disabled) {
-				let p = new Promise((resolve) => {
-					if (!d.numeric_values) {
-						frappe
-							.call({
-								method: "frappe.client.get_list",
-								args: {
-									doctype: "Item Attribute Value",
-									filters: [["parent", "=", d.attribute]],
-									fields: ["attribute_value"],
-									limit_page_length: 0,
-									parent: "Item Attribute",
-									order_by: "idx",
-								},
-							})
-							.then((r) => {
-								if (r.message) {
-									attr_val_fields[d.attribute] = r.message.map(function (d) {
-										return d.attribute_value;
-									});
-									resolve();
-								}
-							});
-					} else {
-						let values = [];
-						for (var i = d.from_range; i <= d.to_range; i = flt(i + d.increment, 6)) {
-							values.push(i);
-						}
-						attr_val_fields[d.attribute] = values;
-						resolve();
+			let p = new Promise((resolve) => {
+				if (!d.numeric_values) {
+					frappe
+						.call({
+							method: "frappe.client.get_list",
+							args: {
+								doctype: "Item Attribute Value",
+								filters: [["parent", "=", d.attribute]],
+								fields: ["attribute_value"],
+								limit_page_length: 0,
+								parent: "Item Attribute",
+								order_by: "idx",
+							},
+						})
+						.then((r) => {
+							if (r.message) {
+								attr_val_fields[d.attribute] = r.message.map(function (d) {
+									return d.attribute_value;
+								});
+								resolve();
+							}
+						});
+				} else {
+					let values = [];
+					for (var i = d.from_range; i <= d.to_range; i = flt(i + d.increment, 6)) {
+						values.push(i);
 					}
-				});
+					attr_val_fields[d.attribute] = values;
+					resolve();
+				}
+			});
 
-				promises.push(p);
-			}
+			promises.push(p);
 		}, this);
 
 		Promise.all(promises).then(() => {
@@ -699,36 +699,25 @@ $.extend(erpnext.item, {
 		for (var i = 0; i < frm.doc.attributes.length; i++) {
 			var fieldtype, desc;
 			var row = frm.doc.attributes[i];
-			if (!row.disabled) {
-				if (row.numeric_values) {
-					fieldtype = "Float";
-					desc =
-						"Min Value: " +
-						row.from_range +
-						" , Max Value: " +
-						row.to_range +
-						", in Increments of: " +
-						row.increment;
-				} else {
-					fieldtype = "Data";
-					desc = "";
-				}
-				fields = fields.concat({
-					label: row.attribute,
-					fieldname: row.attribute,
-					fieldtype: fieldtype,
-					reqd: 0,
-					description: desc,
-				});
+			if (row.numeric_values) {
+				fieldtype = "Float";
+				desc =
+					"Min Value: " +
+					row.from_range +
+					" , Max Value: " +
+					row.to_range +
+					", in Increments of: " +
+					row.increment;
+			} else {
+				fieldtype = "Data";
+				desc = "";
 			}
-		}
-
-		if (frm.doc.image) {
-			fields.push({
-				fieldtype: "Check",
-				label: __("Create a variant with the template image."),
-				fieldname: "use_template_image",
-				default: 0,
+			fields = fields.concat({
+				label: row.attribute,
+				fieldname: row.attribute,
+				fieldtype: fieldtype,
+				reqd: 0,
+				description: desc,
 			});
 		}
 
@@ -773,7 +762,6 @@ $.extend(erpnext.item, {
 							args: {
 								item: frm.doc.name,
 								args: d.get_values(),
-								use_template_image: args.use_template_image,
 							},
 							callback: function (r) {
 								var doclist = frappe.model.sync(r.message);

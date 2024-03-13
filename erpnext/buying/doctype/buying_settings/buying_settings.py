@@ -14,7 +14,7 @@ class BuyingSettings(Document):
 
 	from typing import TYPE_CHECKING
 
-	if TYPE_CHECKING:  # pragma: no cover
+	if TYPE_CHECKING:
 		from frappe.types import DF
 
 		allow_multiple_items: DF.Check
@@ -27,7 +27,6 @@ class BuyingSettings(Document):
 		blanket_order_allowance: DF.Float
 		buying_price_list: DF.Link | None
 		disable_last_purchase_rate: DF.Check
-		fixed_email: DF.Link | None
 		maintain_same_rate: DF.Check
 		maintain_same_rate_action: DF.Literal["Stop", "Warn"]
 		over_transfer_allowance: DF.Float
@@ -36,7 +35,6 @@ class BuyingSettings(Document):
 		project_update_frequency: DF.Literal["Each Transaction", "Manual"]
 		role_to_override_stop_action: DF.Link | None
 		set_landed_cost_based_on_purchase_invoice_rate: DF.Check
-		set_valuation_rate_for_rejected_materials: DF.Check
 		show_pay_button: DF.Check
 		supp_master_name: DF.Literal["Supplier Name", "Naming Series", "Auto Name"]
 		supplier_group: DF.Link | None
@@ -56,8 +54,7 @@ class BuyingSettings(Document):
 			hide_name_field=False,
 		)
 
-		if not self.bill_for_rejected_quantity_in_purchase_invoice:
-			self.set_valuation_rate_for_rejected_materials = 0
+		set_search_fields("Supplier", "supplier_name", self.get("supp_master_name") == "Naming Series")
 
 	def before_save(self):
 		self.check_maintain_same_rate()
@@ -65,3 +62,27 @@ class BuyingSettings(Document):
 	def check_maintain_same_rate(self):
 		if self.maintain_same_rate:
 			self.set_landed_cost_based_on_purchase_invoice_rate = 0
+
+
+def set_search_fields(doctype, fieldname, naming_series):
+	"""Change a doctype's naming to user naming series"""
+	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+
+	searchfields = frappe.get_meta(doctype).get_search_fields()
+
+	if naming_series:
+		if fieldname not in searchfields:
+			searchfields.append(fieldname)
+	else:
+		if fieldname in searchfields:
+			searchfields.remove(fieldname)
+
+	make_property_setter(
+		doctype,
+		"",
+		"search_fields",
+		", ".join(searchfields),
+		"Data",
+		for_doctype=True,
+		validate_fields_for_doctype=False,
+	)

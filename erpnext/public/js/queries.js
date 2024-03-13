@@ -12,6 +12,10 @@ $.extend(erpnext.queries, {
 		return { query: "erpnext.controllers.queries.lead_query" };
 	},
 
+	customer: function () {
+		return { query: "erpnext.controllers.queries.customer_query" };
+	},
+
 	item: function (filters) {
 		var args = { query: "erpnext.controllers.queries.item_query" };
 		if (filters) args["filters"] = filters;
@@ -22,15 +26,15 @@ $.extend(erpnext.queries, {
 		return { query: "erpnext.controllers.queries.bom" };
 	},
 
+	task: function () {
+		return { query: "erpnext.projects.utils.query_task" };
+	},
+
 	customer_filter: function (doc) {
 		if (!doc.customer) {
-			cur_frm.scroll_to_field("customer");
-			frappe.show_alert({
-				message: __("Please set {0} first.", [
-					__(frappe.meta.get_label(doc.doctype, "customer", doc.name)),
-				]),
-				indicator: "orange",
-			});
+			frappe.throw(
+				__("Please set {0}", [__(frappe.meta.get_label(doc.doctype, "customer", doc.name))])
+			);
 		}
 
 		return { filters: { customer: doc.customer } };
@@ -39,13 +43,11 @@ $.extend(erpnext.queries, {
 	contact_query: function (doc) {
 		if (frappe.dynamic_link) {
 			if (!doc[frappe.dynamic_link.fieldname]) {
-				cur_frm.scroll_to_field(frappe.dynamic_link.fieldname);
-				frappe.show_alert({
-					message: __("Please set {0} first.", [
+				frappe.throw(
+					__("Please set {0}", [
 						__(frappe.meta.get_label(doc.doctype, frappe.dynamic_link.fieldname, doc.name)),
-					]),
-					indicator: "orange",
-				});
+					])
+				);
 			}
 
 			return {
@@ -58,26 +60,14 @@ $.extend(erpnext.queries, {
 		}
 	},
 
-	company_contact_query: function (doc) {
-		if (!doc.company) {
-			frappe.throw(__("Please set {0}", [__(frappe.meta.get_label(doc.doctype, "company", doc.name))]));
-		}
-		return {
-			query: "frappe.contacts.doctype.contact.contact.contact_query",
-			filters: { link_doctype: "Company", link_name: doc.company },
-		};
-	},
-
 	address_query: function (doc) {
 		if (frappe.dynamic_link) {
 			if (!doc[frappe.dynamic_link.fieldname]) {
-				cur_frm.scroll_to_field(frappe.dynamic_link.fieldname);
-				frappe.show_alert({
-					message: __("Please set {0} first.", [
+				frappe.throw(
+					__("Please set {0}", [
 						__(frappe.meta.get_label(doc.doctype, frappe.dynamic_link.fieldname, doc.name)),
-					]),
-					indicator: "orange",
-				});
+					])
+				);
 			}
 
 			return {
@@ -91,40 +81,24 @@ $.extend(erpnext.queries, {
 	},
 
 	company_address_query: function (doc) {
-		if (!doc.company) {
-			cur_frm.scroll_to_field("company");
-			frappe.show_alert({
-				message: __("Please set {0} first.", [
-					__(frappe.meta.get_label(doc.doctype, "company", doc.name)),
-				]),
-				indicator: "orange",
-			});
-		}
 		return {
 			query: "frappe.contacts.doctype.address.address.address_query",
-			filters: { link_doctype: "Company", link_name: doc.company },
+			filters: { is_your_company_address: 1, link_doctype: "Company", link_name: doc.company || "" },
 		};
 	},
 
 	dispatch_address_query: function (doc) {
-		var filters = { link_doctype: "Company", link_name: doc.company || "" };
-		var is_drop_ship = doc.items.some((item) => item.delivered_by_supplier);
-		if (is_drop_ship) filters = {};
 		return {
 			query: "frappe.contacts.doctype.address.address.address_query",
-			filters: filters,
+			filters: { link_doctype: "Company", link_name: doc.company || "" },
 		};
 	},
 
 	supplier_filter: function (doc) {
 		if (!doc.supplier) {
-			cur_frm.scroll_to_field("supplier");
-			frappe.show_alert({
-				message: __("Please set {0} first.", [
-					__(frappe.meta.get_label(doc.doctype, "supplier", doc.name)),
-				]),
-				indicator: "orange",
-			});
+			frappe.throw(
+				__("Please set {0}", [__(frappe.meta.get_label(doc.doctype, "supplier", doc.name))])
+			);
 		}
 
 		return { filters: { supplier: doc.supplier } };
@@ -132,13 +106,9 @@ $.extend(erpnext.queries, {
 
 	lead_filter: function (doc) {
 		if (!doc.lead) {
-			cur_frm.scroll_to_field("lead");
-			frappe.show_alert({
-				message: __("Please specify a {0} first.", [
-					__(frappe.meta.get_label(doc.doctype, "lead", doc.name)),
-				]),
-				indicator: "orange",
-			});
+			frappe.throw(
+				__("Please specify a {0}", [__(frappe.meta.get_label(doc.doctype, "lead", doc.name))])
+			);
 		}
 
 		return { filters: { lead: doc.lead } };
