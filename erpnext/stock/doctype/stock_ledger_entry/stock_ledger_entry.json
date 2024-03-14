@@ -34,6 +34,7 @@
   "section_break_21",
   "company",
   "stock_uom",
+  "project",
   "column_break_26",
   "fiscal_year",
   "has_batch_no",
@@ -73,8 +74,7 @@
    "label": "Batch No",
    "oldfieldname": "batch_no",
    "oldfieldtype": "Data",
-   "read_only": 1,
-   "search_index": 1
+   "read_only": 1
   },
   {
    "fieldname": "warehouse",
@@ -88,6 +88,7 @@
    "options": "Warehouse",
    "print_width": "100px",
    "read_only": 1,
+   "search_index": 1,
    "width": "100px"
   },
   {
@@ -122,7 +123,6 @@
    "options": "DocType",
    "print_width": "150px",
    "read_only": 1,
-   "search_index": 1,
    "width": "150px"
   },
   {
@@ -238,6 +238,12 @@
    "read_only": 1
   },
   {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
    "fieldname": "company",
    "fieldtype": "Link",
    "in_filter": 1,
@@ -345,18 +351,16 @@
   {
    "fieldname": "posting_datetime",
    "fieldtype": "Datetime",
-   "label": "Posting Datetime",
-   "search_index": 1
+   "label": "Posting Datetime"
   }
  ],
- "grid_page_length": 50,
  "hide_toolbar": 1,
  "icon": "fa fa-list",
  "idx": 1,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-04-22 12:37:41.304109",
+ "modified": "2024-03-13 09:56:13.021696",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Ledger Entry",
