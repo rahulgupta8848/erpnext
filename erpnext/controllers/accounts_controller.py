@@ -46,7 +46,6 @@ from erpnext.accounts.party import (
 from erpnext.accounts.utils import (
 	create_gain_loss_journal,
 	get_account_currency,
-	get_currency_precision,
 	get_fiscal_years,
 	validate_fiscal_year,
 )
@@ -89,7 +88,6 @@ force_item_fields = (
 	"weight_per_unit",
 	"weight_uom",
 	"total_weight",
-	"valuation_rate",
 )
 
 
@@ -169,13 +167,6 @@ class AccountsController(TransactionBase):
 		if not self.get("is_return") and not self.get("is_debit_note"):
 			self.validate_qty_is_not_zero()
 
-		if (
-			self.doctype in ["Sales Invoice", "Purchase Invoice"]
-			and self.get("is_return")
-			and self.get("update_stock")
-		):
-			self.validate_zero_qty_for_return_invoices_with_stock()
-
 		if self.get("_action") and self._action != "update_after_submit":
 			self.set_missing_values(for_validate=True)
 
@@ -226,18 +217,17 @@ class AccountsController(TransactionBase):
 				)
 
 			if self.get("is_return") and self.get("return_against") and not self.get("is_pos"):
-				if self.get("update_outstanding_for_self"):
-					document_type = "Credit Note" if self.doctype == "Sales Invoice" else "Debit Note"
-					frappe.msgprint(
-						_(
-							"We can see {0} is made against {1}. If you want {1}'s outstanding to be updated, uncheck '{2}' checkbox. <br><br> Or you can use {3} tool to reconcile against {1} later."
-						).format(
-							frappe.bold(document_type),
-							get_link_to_form(self.doctype, self.get("return_against")),
-							frappe.bold("Update Outstanding for Self"),
-							get_link_to_form("Payment Reconciliation"),
-						)
+				# if self.get("is_return") and self.get("return_against"):
+				document_type = "Credit Note" if self.doctype == "Sales Invoice" else "Debit Note"
+				frappe.msgprint(
+					_(
+						"{0} will be treated as a standalone {0}. Post creation use {1} tool to reconcile against {2}."
+					).format(
+						document_type,
+						get_link_to_form("Payment Reconciliation"),
+						get_link_to_form(self.doctype, self.get("return_against")),
 					)
+				)
 
 			pos_check_field = "is_pos" if self.doctype == "Sales Invoice" else "is_paid"
 			if cint(self.allocate_advances_automatically) and not cint(self.get(pos_check_field)):
@@ -610,23 +600,31 @@ class AccountsController(TransactionBase):
 				)
 
 	def validate_due_date(self):
-		if self.get("is_pos"):
+		if self.get("is_pos") or self.doctype not in ["Sales Invoice", "Purchase Invoice"]:
 			return
 
 		from erpnext.accounts.party import validate_due_date
 
-		if self.doctype == "Sales Invoice":
+		posting_date = (
+			self.posting_date if self.doctype == "Sales Invoice" else (self.bill_date or self.posting_date)
+		)
+
+		# skip due date validation for records via Data Import
+		if frappe.flags.in_import and getdate(self.due_date) < getdate(posting_date):
+			self.due_date = posting_date
+
+		elif self.doctype == "Sales Invoice":
 			if not self.due_date:
 				frappe.throw(_("Due Date is mandatory"))
 
 			validate_due_date(
-				self.posting_date,
+				posting_date,
 				self.due_date,
 				self.payment_terms_template,
 			)
 		elif self.doctype == "Purchase Invoice":
 			validate_due_date(
-				self.bill_date or self.posting_date,
+				posting_date,
 				self.due_date,
 				self.bill_date,
 				self.payment_terms_template,
@@ -1052,18 +1050,6 @@ class AccountsController(TransactionBase):
 		else:
 			return flt(args.get(field, 0) / self.get("conversion_rate", 1))
 
-	def validate_zero_qty_for_return_invoices_with_stock(self):
-		rows = []
-		for item in self.items:
-			if not flt(item.qty):
-				rows.append(item)
-		if rows:
-			frappe.throw(
-				_(
-					"For Return Invoices with Stock effect, '0' qty Items are not allowed. Following rows are affected: {0}"
-				).format(frappe.bold(comma_and(["#" + str(x.idx) for x in rows])))
-			)
-
 	def validate_qty_is_not_zero(self):
 		for item in self.items:
 			if self.doctype == "Purchase Receipt" and item.rejected_qty:
@@ -1157,24 +1143,21 @@ class AccountsController(TransactionBase):
 			self.append("advances", advance_row)
 
 	def get_advance_entries(self, include_unallocated=True):
-		party_account = []
 		if self.doctype == "Sales Invoice":
 			party_type = "Customer"
 			party = self.customer
 			amount_field = "credit_in_account_currency"
 			order_field = "sales_order"
 			order_doctype = "Sales Order"
-			party_account.append(self.debit_to)
 		else:
 			party_type = "Supplier"
 			party = self.supplier
 			amount_field = "debit_in_account_currency"
 			order_field = "purchase_order"
 			order_doctype = "Purchase Order"
-			party_account.append(self.credit_to)
 
-		party_account.extend(
-			get_party_account(party_type, party=party, company=self.company, include_advance=True)
+		party_account = get_party_account(
+			party_type, party=party, company=self.company, include_advance=True
 		)
 
 		order_list = list(set(d.get(order_field) for d in self.get("items") if d.get(order_field)))
@@ -1323,12 +1306,10 @@ class AccountsController(TransactionBase):
 				# These are generated by Sales/Purchase Invoice during reconciliation and advance allocation.
 				# and below logic is only for such scenarios
 				if args:
-					precision = get_currency_precision()
 					for arg in args:
 						# Advance section uses `exchange_gain_loss` and reconciliation uses `difference_amount`
 						if (
-							flt(arg.get("difference_amount", 0), precision) != 0
-							or flt(arg.get("exchange_gain_loss", 0), precision) != 0
+							arg.get("difference_amount", 0) != 0 or arg.get("exchange_gain_loss", 0) != 0
 						) and arg.get("difference_account"):
 
 							party_account = arg.get("account")
@@ -1885,7 +1866,7 @@ class AccountsController(TransactionBase):
 				(ple.against_voucher_type == self.doctype)
 				& (ple.against_voucher_no == self.name)
 				& (ple.party == party)
-				& (ple.delinked == 0)
+				& (ple.docstatus == 1)
 				& (ple.company == self.company)
 			)
 			.run(as_dict=True)
@@ -1901,10 +1882,7 @@ class AccountsController(TransactionBase):
 				advance_paid, precision=self.precision("advance_paid"), currency=advance.account_currency
 			)
 
-			if advance.account_currency:
-				frappe.db.set_value(
-					self.doctype, self.name, "party_account_currency", advance.account_currency
-				)
+			frappe.db.set_value(self.doctype, self.name, "party_account_currency", advance.account_currency)
 
 			if advance.account_currency == self.currency:
 				order_total = self.get("rounded_total") or self.grand_total
