@@ -3271,9 +3271,10 @@ def create_payment_order_against_payment_entry(ref_doc, order_type, bank_account
 	return doc
 
 	def test_reverse_payment_reconciliation(self):
+		customer = create_customer(frappe.generate_hash(length=10), "INR")
 		pe = create_payment_entry(
 			party_type="Customer",
-			party="_Test Customer",
+			party=customer,
 			payment_type="Receive",
 			paid_from="Debtors - _TC",
 			paid_to="_Test Cash - _TC",
@@ -3282,7 +3283,7 @@ def create_payment_order_against_payment_entry(ref_doc, order_type, bank_account
 
 		reverse_pe = create_payment_entry(
 			party_type="Customer",
-			party="_Test Customer",
+			party=customer,
 			payment_type="Pay",
 			paid_from="_Test Cash - _TC",
 			paid_to="Debtors - _TC",
@@ -3292,7 +3293,7 @@ def create_payment_order_against_payment_entry(ref_doc, order_type, bank_account
 		pr = frappe.get_doc("Payment Reconciliation")
 		pr.company = "_Test Company"
 		pr.party_type = "Customer"
-		pr.party = "_Test Customer"
+		pr.party = customer
 		pr.receivable_payable_account = "Debtors - _TC"
 		pr.get_unreconciled_entries()
 		self.assertEqual(len(pr.invoices), 1)
@@ -3312,6 +3313,7 @@ def create_payment_order_against_payment_entry(ref_doc, order_type, bank_account
 		from erpnext.accounts.doctype.account.test_account import create_account
 
 		company = "_Test Company"
+		customer = create_customer(frappe.generate_hash(length=10), "INR")
 		advance_account = create_account(
 			parent_account="Current Assets - _TC",
 			account_name="Advances Received",
@@ -3330,7 +3332,7 @@ def create_payment_order_against_payment_entry(ref_doc, order_type, bank_account
 		# Reverse Payment(essentially an Invoice)
 		reverse_pe = create_payment_entry(
 			party_type="Customer",
-			party="_Test Customer",
+			party=customer,
 			payment_type="Pay",
 			paid_from="_Test Cash - _TC",
 			paid_to=advance_account,
@@ -3341,7 +3343,7 @@ def create_payment_order_against_payment_entry(ref_doc, order_type, bank_account
 		# Advance Payment
 		pe = create_payment_entry(
 			party_type="Customer",
-			party="_Test Customer",
+			party=customer,
 			payment_type="Receive",
 			paid_from=advance_account,
 			paid_to="_Test Cash - _TC",
@@ -3353,7 +3355,7 @@ def create_payment_order_against_payment_entry(ref_doc, order_type, bank_account
 		pr = frappe.get_doc("Payment Reconciliation")
 		pr.company = company
 		pr.party_type = "Customer"
-		pr.party = "_Test Customer"
+		pr.party = customer
 		pr.receivable_payable_account = "Debtors - _TC"
 		pr.default_advance_account = advance_account
 		pr.get_unreconciled_entries()
