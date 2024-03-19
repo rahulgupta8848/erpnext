@@ -15,11 +15,10 @@ erpnext.sales_common = {
 			onload() {
 				super.onload();
 				this.setup_queries();
-				this.frm.set_query("shipping_rule", function (doc) {
+				this.frm.set_query("shipping_rule", function () {
 					return {
 						filters: {
 							shipping_rule_type: "Selling",
-							company: doc.company
 						},
 					};
 				});
@@ -29,7 +28,6 @@ erpnext.sales_common = {
 						query: "erpnext.controllers.queries.get_project_name",
 						filters: {
 							customer: doc.customer,
-							company: doc.company
 						},
 					};
 				});
@@ -49,11 +47,9 @@ erpnext.sales_common = {
 				);
 
 				me.frm.set_query("contact_person", erpnext.queries.contact_query);
-				me.frm.set_query("company_contact_person", erpnext.queries.company_contact_query);
 				me.frm.set_query("customer_address", erpnext.queries.address_query);
 				me.frm.set_query("shipping_address_name", erpnext.queries.address_query);
 				me.frm.set_query("dispatch_address_name", erpnext.queries.dispatch_address_query);
-				me.frm.set_query("company_address", erpnext.queries.company_address_query);
 
 				erpnext.accounts.dimensions.setup_dimension_filters(me.frm, me.frm.doctype);
 
@@ -109,34 +105,6 @@ erpnext.sales_common = {
 				);
 
 				this.toggle_editable_price_list_rate();
-				this.change_warehouse_labels_for_return();
-			}
-
-			company() {
-				super.company();
-				this.set_default_company_address();
-			}
-
-			set_default_company_address() {
-				if (!frappe.meta.has_field(this.frm.doc.doctype, "company_address")) return;
-				var me = this;
-				if (this.frm.doc.company) {
-					frappe.call({
-						method: "erpnext.setup.doctype.company.company.get_default_company_address",
-						args: {
-							name: this.frm.doc.company,
-							existing_address: this.frm.doc.company_address || "",
-						},
-						debounce: 2000,
-						callback: function (r) {
-							if (r.message) {
-								me.frm.set_value("company_address", r.message);
-							} else {
-								me.frm.set_value("company_address", "");
-							}
-						},
-					});
-				}
 			}
 
 			customer() {
@@ -251,28 +219,6 @@ erpnext.sales_common = {
 			warehouse(doc, cdt, cdn) {
 				if (doc.docstatus === 0 && doc.is_return && !doc.return_against) {
 					frappe.model.set_value(cdt, cdn, "incoming_rate", 0.0);
-				}
-
-				this.set_actual_qty(doc, cdt, cdn);
-			}
-
-			set_actual_qty(doc, cdt, cdn) {
-				let row = locals[cdt][cdn];
-				let sales_doctypes = ["Sales Invoice", "Delivery Note", "Sales Order"];
-
-				if (row.item_code && row.warehouse && sales_doctypes.includes(doc.doctype)) {
-					frappe.call({
-						method: "erpnext.stock.get_item_details.get_bin_details",
-						args: {
-							item_code: row.item_code,
-							warehouse: row.warehouse,
-						},
-						callback(r) {
-							if (r.message) {
-								frappe.model.set_value(cdt, cdn, "actual_qty", r.message.actual_qty);
-							}
-						},
-					});
 				}
 			}
 
@@ -404,6 +350,7 @@ erpnext.sales_common = {
 			pick_serial_and_batch(doc, cdt, cdn) {
 				let item = locals[cdt][cdn];
 				let me = this;
+				let path = "assets/erpnext/js/utils/serial_no_batch_selector.js";
 
 				frappe.db.get_value("Item", item.item_code, ["has_batch_no", "has_serial_no"]).then((r) => {
 					if (r.message && (r.message.has_batch_no || r.message.has_serial_no)) {
@@ -417,25 +364,26 @@ erpnext.sales_common = {
 							item.title = __("Select Serial and Batch");
 						}
 
-						new erpnext.SerialBatchPackageSelector(me.frm, item, (r) => {
-							if (r) {
-								let qty = Math.abs(r.total_qty);
-								if (doc.is_return) {
-									qty = qty * -1;
-								}
+						frappe.require(path, function () {
+							new erpnext.SerialBatchPackageSelector(me.frm, item, (r) => {
+								if (r) {
+									let qty = Math.abs(r.total_qty);
+									if (doc.is_return) {
+										qty = qty * -1;
+									}
 
-								frappe.model.set_value(item.doctype, item.name, {
-									serial_and_batch_bundle: r.name,
-									use_serial_batch_fields: 0,
-									incoming_rate: r.avg_rate,
-									qty:
-										qty /
-										flt(
-											item.conversion_factor || 1,
-											precision("conversion_factor", item)
-										),
-								});
-							}
+									frappe.model.set_value(item.doctype, item.name, {
+										serial_and_batch_bundle: r.name,
+										use_serial_batch_fields: 0,
+										qty:
+											qty /
+											flt(
+												item.conversion_factor || 1,
+												precision("conversion_factor", item)
+											),
+									});
+								}
+							});
 						});
 					}
 				});
@@ -466,87 +414,96 @@ erpnext.sales_common = {
 				}
 			}
 
+			project() {
+				let me = this;
+				if (["Delivery Note", "Sales Invoice", "Sales Order"].includes(this.frm.doc.doctype)) {
+					if (this.frm.doc.project) {
+						frappe.call({
+							method: "erpnext.projects.doctype.project.project.get_cost_center_name",
+							args: { project: this.frm.doc.project },
+							callback: function (r, rt) {
+								if (!r.exc) {
+									$.each(me.frm.doc["items"] || [], function (i, row) {
+										if (r.message) {
+											frappe.model.set_value(
+												row.doctype,
+												row.name,
+												"cost_center",
+												r.message
+											);
+											frappe.msgprint(
+												__(
+													"Cost Center For Item with Item Code {0} has been Changed to {1}",
+													[row.item_name, r.message]
+												)
+											);
+										}
+									});
+								}
+							},
+						});
+					}
+				}
+			}
+
 			coupon_code() {
 				this.frm.set_value("discount_amount", 0);
 				this.frm.set_value("additional_discount_percentage", 0);
-			}
-			is_return() {
-				let reset = !this.frm.doc.is_return;
-				this.change_warehouse_labels_for_return(reset);
-			}
-
-			change_warehouse_labels_for_return(reset) {
-				// swap source and target warehouse labels for return
-				let source_warehouse_label = __("Source Warehouse");
-				let target_warehouse_label = __("Set Target Warehouse");
-
-				if (this.frm.doc.doctype == "Delivery Note") {
-					source_warehouse_label = __("Set Source Warehouse");
-				}
-
-				if (reset) {
-					// reset to original labels
-					this.frm.set_df_property("set_warehouse", "label", source_warehouse_label);
-					this.frm.set_df_property("set_target_warehouse", "label", target_warehouse_label);
-					return;
-				}
-
-				if (this.frm.doc.is_return) {
-					this.frm.set_df_property("set_warehouse", "label", target_warehouse_label);
-					this.frm.set_df_property("set_target_warehouse", "label", source_warehouse_label);
-				}
 			}
 		};
 	},
 };
 
 erpnext.pre_sales = {
-
 	set_as_lost: function (doctype) {
 		frappe.ui.form.on(doctype, {
-			
 			set_as_lost_dialog: function (frm) {
-				let field_list = [] 
-				frappe.call({
-					method: "erpnext.selling.doctype.quotation.quotation.get_field_for_lost",
-					freeze : true,
-					args: {
-						doctype:frm.doctype
-					},
-					callback(r) {
-						if (r.message) {
-							field_list = r.message
-							var dialog = new frappe.ui.Dialog({
-								title: __("Set as Lost"),
-								fields: field_list,
-								primary_action: function () {
-									let values = dialog.get_values();
-			
-									frm.call({
-										doc: frm.doc,
-										method: "declare_enquiry_lost",
-										args: {
-											lost_reasons_list: values.lost_reason,
-											competitors: values.competitors ? values.competitors : [],
-											detailed_reason: values.detailed_reason,
-										},
-										callback: function (r) {
-											dialog.hide();
-											frm.reload_doc();
-										},
-									});
-								},
-								primary_action_label: __("Declare Lost"),
-							});
-			
-							dialog.show();
-							
-							
-						}
+				var dialog = new frappe.ui.Dialog({
+					title: __("Set as Lost"),
+					fields: [
+						{
+							fieldtype: "Table MultiSelect",
+							label: __("Lost Reasons"),
+							fieldname: "lost_reason",
+							options:
+								frm.doctype === "Opportunity"
+									? "Opportunity Lost Reason Detail"
+									: "Quotation Lost Reason Detail",
+							reqd: 1,
+						},
+						{
+							fieldtype: "Table MultiSelect",
+							label: __("Competitors"),
+							fieldname: "competitors",
+							options: "Competitor Detail",
+						},
+						{
+							fieldtype: "Small Text",
+							label: __("Detailed Reason"),
+							fieldname: "detailed_reason",
+						},
+					],
+					primary_action: function () {
+						let values = dialog.get_values();
 
+						frm.call({
+							doc: frm.doc,
+							method: "declare_enquiry_lost",
+							args: {
+								lost_reasons_list: values.lost_reason,
+								competitors: values.competitors ? values.competitors : [],
+								detailed_reason: values.detailed_reason,
+							},
+							callback: function (r) {
+								dialog.hide();
+								frm.reload_doc();
+							},
+						});
 					},
-				});				
-				
+					primary_action_label: __("Declare Lost"),
+				});
+
+				dialog.show();
 			},
 		});
 	},
