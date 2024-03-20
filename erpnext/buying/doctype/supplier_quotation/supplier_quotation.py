@@ -6,7 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt, getdate, nowdate
-import json
+
 from erpnext.buying.utils import validate_for_items
 from erpnext.controllers.buying_controller import BuyingController
 
@@ -19,11 +19,16 @@ class SupplierQuotation(BuyingController):
 
 	from typing import TYPE_CHECKING
 
-	if TYPE_CHECKING: # pragma: no cover
-		from erpnext.accounts.doctype.pricing_rule_detail.pricing_rule_detail import PricingRuleDetail
-		from erpnext.accounts.doctype.purchase_taxes_and_charges.purchase_taxes_and_charges import PurchaseTaxesandCharges
-		from erpnext.buying.doctype.supplier_quotation_item.supplier_quotation_item import SupplierQuotationItem
+	if TYPE_CHECKING:
 		from frappe.types import DF
+
+		from erpnext.accounts.doctype.pricing_rule_detail.pricing_rule_detail import PricingRuleDetail
+		from erpnext.accounts.doctype.purchase_taxes_and_charges.purchase_taxes_and_charges import (
+			PurchaseTaxesandCharges,
+		)
+		from erpnext.buying.doctype.supplier_quotation_item.supplier_quotation_item import (
+			SupplierQuotationItem,
+		)
 
 		additional_discount_percentage: DF.Float
 		address_display: DF.SmallText | None
@@ -65,7 +70,8 @@ class SupplierQuotation(BuyingController):
 		named_place: DF.Data | None
 		naming_series: DF.Literal["PUR-SQTN-.YYYY.-"]
 		net_total: DF.Currency
-		other_charges_calculation: DF.TextEditor | None
+		opportunity: DF.Link | None
+		other_charges_calculation: DF.MarkdownEditor | None
 		plc_conversion_rate: DF.Float
 		price_list_currency: DF.Link | None
 		pricing_rules: DF.Table[PricingRuleDetail]
@@ -98,7 +104,7 @@ class SupplierQuotation(BuyingController):
 	# end: auto-generated types
 
 	def validate(self):
-		super().validate()
+		super(SupplierQuotation, self).validate()
 
 		if not self.status:
 			self.status = "Draft"
@@ -124,7 +130,7 @@ class SupplierQuotation(BuyingController):
 		pass
 
 	def validate_with_previous_doc(self):
-		super().validate_with_previous_doc(
+		super(SupplierQuotation, self).validate_with_previous_doc(
 			{
 				"Material Request": {
 					"ref_dn_field": "prevdoc_docname",
@@ -213,11 +219,7 @@ def get_list_context(context=None):
 
 
 @frappe.whitelist()
-def make_purchase_order(source_name, target_doc=None, args=None):
-	if args is None:
-		args = {}
-	if isinstance(args, str):
-		args = json.loads(args)
+def make_purchase_order(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		target.run_method("set_missing_values")
 		target.run_method("get_schedule_dates")
@@ -225,11 +227,6 @@ def make_purchase_order(source_name, target_doc=None, args=None):
 
 	def update_item(obj, target, source_parent):
 		target.stock_qty = flt(obj.qty) * flt(obj.conversion_factor)
-	
-	def select_item(d):
-		filtered_items = args.get("filtered_children", [])
-		child_filter = d.name in filtered_items if filtered_items else True
-		return child_filter
 
 	doclist = get_mapped_doc(
 		"Supplier Quotation",
@@ -237,7 +234,6 @@ def make_purchase_order(source_name, target_doc=None, args=None):
 		{
 			"Supplier Quotation": {
 				"doctype": "Purchase Order",
-				"field_no_map": ["transaction_date"],
 				"validation": {
 					"docstatus": ["=", 1],
 				},
@@ -252,7 +248,6 @@ def make_purchase_order(source_name, target_doc=None, args=None):
 					["sales_order", "sales_order"],
 				],
 				"postprocess": update_item,
-				"condition": select_item,
 			},
 			"Purchase Taxes and Charges": {
 				"doctype": "Purchase Taxes and Charges",

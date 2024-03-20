@@ -32,7 +32,6 @@
   "ignore_pricing_rule",
   "items_section",
   "scan_barcode",
-  "last_scanned_warehouse",
   "items",
   "sec_break23",
   "total_qty",
@@ -66,7 +65,6 @@
   "grand_total",
   "rounding_adjustment",
   "rounded_total",
-  "disable_rounded_total",
   "in_words",
   "section_break_44",
   "apply_discount_on",
@@ -75,6 +73,7 @@
   "column_break_46",
   "additional_discount_percentage",
   "discount_amount",
+  "referral_sales_partner",
   "sec_tax_breakup",
   "other_charges_calculation",
   "bundle_items_section",
@@ -96,9 +95,8 @@
   "shipping_address",
   "company_address_section",
   "company_address",
-  "company_address_display",
   "column_break_87",
-  "company_contact_person",
+  "company_address_display",
   "terms_tab",
   "payment_schedule_section",
   "payment_terms_template",
@@ -118,6 +116,7 @@
   "language",
   "lost_reasons_section",
   "lost_reasons",
+  "competitors",
   "column_break_117",
   "order_lost_reason",
   "additional_info_section",
@@ -125,7 +124,10 @@
   "customer_group",
   "territory",
   "column_break_108",
+  "campaign",
+  "source",
   "column_break4",
+  "opportunity",
   "supplier_quotation",
   "enq_det",
   "connections_tab"
@@ -601,6 +603,12 @@
    "options": "Coupon Code"
   },
   {
+   "fieldname": "referral_sales_partner",
+   "fieldtype": "Link",
+   "label": "Referral Sales Partner",
+   "options": "Sales Partner"
+  },
+  {
    "default": "Grand Total",
    "fieldname": "apply_discount_on",
    "fieldtype": "Select",
@@ -653,7 +661,6 @@
    "width": "200px"
   },
   {
-   "depends_on": "eval:!doc.disable_rounded_total",
    "fieldname": "base_rounding_adjustment",
    "fieldtype": "Currency",
    "label": "Rounding Adjustment (Company Currency)",
@@ -702,7 +709,6 @@
    "width": "200px"
   },
   {
-   "depends_on": "eval:!doc.disable_rounded_total",
    "fieldname": "rounding_adjustment",
    "fieldtype": "Currency",
    "label": "Rounding Adjustment",
@@ -847,6 +853,24 @@
    "label": "Update Auto Repeat Reference"
   },
   {
+   "fieldname": "campaign",
+   "fieldtype": "Link",
+   "label": "Campaign",
+   "oldfieldname": "campaign",
+   "oldfieldtype": "Link",
+   "options": "Campaign",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Link",
+   "label": "Source",
+   "oldfieldname": "source",
+   "oldfieldtype": "Select",
+   "options": "Lead Source",
+   "print_hide": 1
+  },
+  {
    "allow_on_submit": 1,
    "depends_on": "eval:doc.status=='Lost'",
    "fieldname": "order_lost_reason",
@@ -895,11 +919,18 @@
    "options": "Supplier Quotation"
   },
   {
+   "fieldname": "opportunity",
+   "fieldtype": "Link",
+   "label": "Opportunity",
+   "options": "Opportunity",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
    "allow_on_submit": 1,
    "fieldname": "lost_reasons",
    "fieldtype": "Table MultiSelect",
    "label": "Lost Reasons",
-   "no_copy": 1,
    "options": "Quotation Lost Reason Detail",
    "read_only": 1
   },
@@ -918,6 +949,13 @@
    "label": "Bundle Items",
    "options": "fa fa-suitcase",
    "print_hide": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "competitors",
+   "fieldtype": "Table MultiSelect",
+   "label": "Competitors",
+   "options": "Competitor Detail"
   },
   {
    "fieldname": "company_address",
@@ -1029,33 +1067,13 @@
    "fieldname": "named_place",
    "fieldtype": "Data",
    "label": "Named Place"
-  },
-  {
-    "default": "0",
-    "fieldname": "disable_rounded_total",
-    "fieldtype": "Check",
-    "label": "Disable Rounded Total"
-   },
-   {
-    "fieldname": "company_contact_person",
-    "fieldtype": "Link",
-    "label": "Company Contact Person",
-    "options": "Contact",
-    "print_hide": 1
-    },
-  {
-   "depends_on": "eval: doc.last_scanned_warehouse",
-   "fieldname": "last_scanned_warehouse",
-   "fieldtype": "Data",
-   "is_virtual": 1,
-   "label": "Last Scanned Warehouse"
-   }
+  }
  ],
  "icon": "fa fa-shopping-cart",
  "idx": 82,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-05-27 16:04:39.208077",
+ "modified": "2024-03-20 16:04:21.567847",
  "modified_by": "Administrator",
  "module": "Selling",
  "name": "Quotation",

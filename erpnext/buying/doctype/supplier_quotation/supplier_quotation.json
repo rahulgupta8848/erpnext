@@ -23,6 +23,7 @@
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
+  "project",
   "currency_and_price_list",
   "currency",
   "conversion_rate",
@@ -114,6 +115,7 @@
   "more_info",
   "is_subcontracted",
   "column_break_57",
+  "opportunity",
   "connections_tab"
  ],
  "fields": [
@@ -460,7 +462,7 @@
   },
   {
    "fieldname": "other_charges_calculation",
-   "fieldtype": "Text Editor",
+   "fieldtype": "Markdown Editor",
    "label": "Taxes and Charges Calculation",
    "no_copy": 1,
    "oldfieldtype": "HTML",
@@ -786,6 +788,15 @@
    "print_hide": 1
   },
   {
+   "fieldname": "opportunity",
+   "fieldtype": "Link",
+   "label": "Opportunity",
+   "no_copy": 1,
+   "options": "Opportunity",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "valid_till",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -897,6 +908,12 @@
    "options": "Cost Center"
   },
   {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
    "fieldname": "dimension_col_break",
    "fieldtype": "Column Break"
   },
@@ -911,7 +928,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-11-07 15:06:16.564556",
+ "modified": "2024-03-20 16:03:59.069145",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Supplier Quotation",

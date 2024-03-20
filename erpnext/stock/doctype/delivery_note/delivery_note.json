@@ -26,6 +26,7 @@
   "accounting_dimensions_section",
   "cost_center",
   "column_break_18",
+  "project",
   "dimension_col_break",
   "currency_and_price_list",
   "currency",
@@ -37,7 +38,7 @@
   "ignore_pricing_rule",
   "items_section",
   "scan_barcode",
-  "last_scanned_warehouse",
+  "pick_list",
   "col_break_warehouse",
   "set_warehouse",
   "set_target_warehouse",
@@ -107,9 +108,8 @@
   "dispatch_address",
   "company_address_section",
   "company_address",
-  "company_address_display",
   "column_break_101",
-  "company_contact_person",
+  "company_address_display",
   "terms_tab",
   "tc_name",
   "terms",
@@ -135,6 +135,14 @@
   "po_no",
   "column_break_17",
   "po_date",
+  "sales_team_section_break",
+  "sales_partner",
+  "amount_eligible_for_commission",
+  "column_break7",
+  "commission_rate",
+  "total_commission",
+  "section_break1",
+  "sales_team",
   "subscription_section",
   "auto_repeat",
   "printing_details",
@@ -150,6 +158,8 @@
   "inter_company_reference",
   "customer_group",
   "territory",
+  "source",
+  "campaign",
   "column_break5",
   "excise_page",
   "instructions",
@@ -248,7 +258,6 @@
    "width": "100px"
   },
   {
-   "default": "Now",
    "fieldname": "posting_time",
    "fieldtype": "Time",
    "label": "Posting Time",
@@ -952,6 +961,32 @@
    "print_hide": 1
   },
   {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "oldfieldname": "project",
+   "oldfieldtype": "Link",
+   "options": "Project"
+  },
+  {
+   "fieldname": "campaign",
+   "fieldtype": "Link",
+   "label": "Campaign",
+   "oldfieldname": "campaign",
+   "oldfieldtype": "Link",
+   "options": "Campaign",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Link",
+   "label": "Source",
+   "oldfieldname": "source",
+   "oldfieldtype": "Select",
+   "options": "Lead Source",
+   "print_hide": 1
+  },
+  {
    "fieldname": "column_break5",
    "fieldtype": "Column Break",
    "oldfieldtype": "Column Break",
@@ -1116,6 +1151,82 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
+   "collapsible_depends_on": "total_commission",
+   "fieldname": "sales_team_section_break",
+   "fieldtype": "Section Break",
+   "label": "Commission",
+   "oldfieldtype": "Section Break",
+   "options": "fa fa-group",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "sales_partner",
+   "fieldtype": "Link",
+   "label": "Sales Partner",
+   "oldfieldname": "sales_partner",
+   "oldfieldtype": "Link",
+   "options": "Sales Partner",
+   "print_hide": 1,
+   "print_width": "150px",
+   "width": "150px"
+  },
+  {
+   "fieldname": "column_break7",
+   "fieldtype": "Column Break",
+   "print_hide": 1,
+   "print_width": "50%",
+   "width": "50%"
+  },
+  {
+   "fetch_from": "sales_partner.commission_rate",
+   "fetch_if_empty": 1,
+   "fieldname": "commission_rate",
+   "fieldtype": "Float",
+   "label": "Commission Rate (%)",
+   "oldfieldname": "commission_rate",
+   "oldfieldtype": "Currency",
+   "print_hide": 1,
+   "print_width": "100px",
+   "width": "100px"
+  },
+  {
+   "fieldname": "total_commission",
+   "fieldtype": "Currency",
+   "label": "Total Commission",
+   "oldfieldname": "total_commission",
+   "oldfieldtype": "Currency",
+   "options": "Company:company:default_currency",
+   "print_hide": 1
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "sales_team",
+   "fieldname": "section_break1",
+   "fieldtype": "Section Break",
+   "label": "Sales Team",
+   "print_hide": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sales_team",
+   "fieldtype": "Table",
+   "label": "Sales Team",
+   "oldfieldname": "sales_team",
+   "oldfieldtype": "Table",
+   "options": "Sales Team",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "pick_list",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Pick List",
+   "options": "Pick List",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
    "default": "0",
    "fetch_from": "customer.is_internal_customer",
    "fieldname": "is_internal_customer",
@@ -1181,6 +1292,12 @@
    "fieldtype": "Small Text",
    "label": "Dispatch Address",
    "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_eligible_for_commission",
+   "fieldtype": "Currency",
+   "label": "Amount Eligible for Commission",
    "read_only": 1
   },
   {
@@ -1274,27 +1391,13 @@
    "fieldname": "named_place",
    "fieldtype": "Data",
    "label": "Named Place"
-  },
-  {
-   "fieldname": "company_contact_person",
-   "fieldtype": "Link",
-   "label": "Company Contact Person",
-   "options": "Contact",
-   "print_hide": 1
-   },
-  {
-   "depends_on": "eval: doc.last_scanned_warehouse",
-   "fieldname": "last_scanned_warehouse",
-   "fieldtype": "Data",
-   "is_virtual": 1,
-   "label": "Last Scanned Warehouse"
   }
  ],
  "icon": "fa fa-truck",
  "idx": 146,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-11-26 12:44:28.258215",
+ "modified": "2024-03-20 16:05:02.854990",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Delivery Note",

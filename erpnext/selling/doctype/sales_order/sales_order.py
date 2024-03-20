@@ -65,6 +65,7 @@ class SalesOrder(SellingController):
 		additional_discount_percentage: DF.Float
 		address_display: DF.SmallText | None
 		advance_paid: DF.Currency
+		advance_payment_status: DF.Literal["Not Requested", "Requested", "Partially Paid", "Fully Paid"]
 		amended_from: DF.Link | None
 		apply_discount_on: DF.Literal["", "Grand Total", "Net Total"]
 		auto_repeat: DF.Link | None
@@ -149,6 +150,7 @@ class SalesOrder(SellingController):
 			"",
 			"Draft",
 			"On Hold",
+			"To Pay",
 			"To Deliver and Bill",
 			"To Bill",
 			"To Deliver",
