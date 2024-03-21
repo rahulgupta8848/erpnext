@@ -1,12 +1,9 @@
-import datetime
-from collections import defaultdict
-import json
 import frappe
 from frappe.query_builder.functions import CombineDatetime, Sum
-from frappe.utils import flt, nowtime
+from frappe.utils import flt
 from frappe.utils.deprecations import deprecated
 from pypika import Order
-from pypika.functions import Coalesce
+
 
 class DeprecatedSerialNoValuation:
 	@deprecated
@@ -20,8 +17,7 @@ class DeprecatedSerialNoValuation:
 		if not serial_nos:
 			return
 
-		if not serial_nos:
-			return
+		actual_qty = flt(self.sle.actual_qty)
 
 		stock_value_change = 0
 		if actual_qty < 0:
@@ -79,7 +75,6 @@ class DeprecatedSerialNoValuation:
 		return incoming_values
 
 
-
 class DeprecatedBatchNoValuation:
 	@deprecated
 	def calculate_avg_rate_from_deprecarated_ledgers(self):
@@ -87,32 +82,22 @@ class DeprecatedBatchNoValuation:
 		for ledger in entries:
 			self.stock_value_differece[ledger.batch_no] += flt(ledger.batch_value)
 			self.available_qty[ledger.batch_no] += flt(ledger.batch_qty)
-			self.total_qty[ledger.batch_no] += flt(ledger.batch_qty)
 
 	@deprecated
 	def get_sle_for_batches(self):
-		from erpnext.stock.utils import get_combine_datetime
-
 		if not self.batchwise_valuation_batches:
 			return []
 
 		sle = frappe.qb.DocType("Stock Ledger Entry")
 
-		timestamp_condition = None
-		if self.sle.posting_date:
-			if self.sle.posting_time is None:
-				self.sle.posting_time = nowtime()
-
-			posting_datetime = get_combine_datetime(self.sle.posting_date, self.sle.posting_time)
-			if not self.sle.creation:
-				posting_datetime = posting_datetime + datetime.timedelta(milliseconds=1)
-
-			timestamp_condition = sle.posting_datetime < posting_datetime
-
-			if self.sle.creation:
-				timestamp_condition |= (sle.posting_datetime == posting_datetime) & (
-					sle.creation < self.sle.creation
-				)
+		timestamp_condition = CombineDatetime(sle.posting_date, sle.posting_time) < CombineDatetime(
+			self.sle.posting_date, self.sle.posting_time
+		)
+		if self.sle.creation:
+			timestamp_condition |= (
+				CombineDatetime(sle.posting_date, sle.posting_time)
+				== CombineDatetime(self.sle.posting_date, self.sle.posting_time)
+			) & (sle.creation < self.sle.creation)
 
 		query = (
 			frappe.qb.from_(sle)
@@ -128,11 +113,9 @@ class DeprecatedBatchNoValuation:
 				& (sle.batch_no.isnotnull())
 				& (sle.is_cancelled == 0)
 			)
+			.where(timestamp_condition)
 			.groupby(sle.batch_no)
 		)
-
-		if timestamp_condition:
-			query = query.where(timestamp_condition)
 
 		if self.sle.name:
 			query = query.where(sle.name != self.sle.name)
@@ -144,8 +127,8 @@ class DeprecatedBatchNoValuation:
 		if not self.non_batchwise_valuation_batches:
 			return
 
-		self.non_batchwise_balance_value = defaultdict(float)
-		self.non_batchwise_balance_qty = defaultdict(float)
+		self.non_batchwise_balance_value = 0.0
+		self.non_batchwise_balance_qty = 0.0
 
 		self.set_balance_value_for_non_batchwise_valuation_batches()
 
@@ -156,20 +139,12 @@ class DeprecatedBatchNoValuation:
 			if not self.non_batchwise_balance_qty:
 				continue
 
-			if not self.non_batchwise_balance_qty.get(batch_no):
-				self.batch_avg_rate[batch_no] = 0.0
-				self.stock_value_differece[batch_no] = 0.0
-			else:
-				self.batch_avg_rate[batch_no] = (
-					self.non_batchwise_balance_value[batch_no] / self.non_batchwise_balance_qty[batch_no]
-				)
-				self.stock_value_differece[batch_no] = self.non_batchwise_balance_value
+			self.batch_avg_rate[batch_no] = (
+				self.non_batchwise_balance_value / self.non_batchwise_balance_qty
+			)
 
 			stock_value_change = self.batch_avg_rate[batch_no] * ledger.qty
 			self.stock_value_change += stock_value_change
-
-			self.non_batchwise_balance_value[batch_no] -= stock_value_change
-			self.non_batchwise_balance_qty[batch_no] -= ledger.qty
 
 			frappe.db.set_value(
 				"Serial and Batch Entry",
@@ -182,37 +157,22 @@ class DeprecatedBatchNoValuation:
 
 	@deprecated
 	def set_balance_value_for_non_batchwise_valuation_batches(self):
-		if hasattr(self, "prev_sle"):
-			self.last_sle = self.prev_sle
-		else:
-			self.last_sle = self.get_last_sle_for_non_batch()
-
-		if self.last_sle and self.last_sle.stock_queue:
-			self.stock_queue = self.last_sle.stock_queue
-			if isinstance(self.stock_queue, str):
-				self.stock_queue = json.loads(self.stock_queue) or []
-
-
 		self.set_balance_value_from_sl_entries()
 		self.set_balance_value_from_bundle()
 
 	@deprecated
 	def set_balance_value_from_sl_entries(self) -> None:
-		from erpnext.stock.utils import get_combine_datetime
-
 		sle = frappe.qb.DocType("Stock Ledger Entry")
 		batch = frappe.qb.DocType("Batch")
 
-		posting_datetime = get_combine_datetime(self.sle.posting_date, self.sle.posting_time)
-		if not self.sle.creation:
-			posting_datetime = posting_datetime + datetime.timedelta(milliseconds=1)
-
-		timestamp_condition = sle.posting_datetime < posting_datetime
-
+		timestamp_condition = CombineDatetime(sle.posting_date, sle.posting_time) < CombineDatetime(
+			self.sle.posting_date, self.sle.posting_time
+		)
 		if self.sle.creation:
-			timestamp_condition |= (sle.posting_datetime == posting_datetime) & (
-				sle.creation < self.sle.creation
-			)
+			timestamp_condition |= (
+				CombineDatetime(sle.posting_date, sle.posting_time)
+				== CombineDatetime(self.sle.posting_date, self.sle.posting_time)
+			) & (sle.creation < self.sle.creation)
 
 		query = (
 			frappe.qb.from_(sle)
@@ -221,15 +181,15 @@ class DeprecatedBatchNoValuation:
 			.select(
 				sle.batch_no,
 				Sum(sle.actual_qty).as_("batch_qty"),
+				Sum(sle.stock_value_difference).as_("batch_value"),
 			)
 			.where(
 				(sle.item_code == self.sle.item_code)
 				& (sle.warehouse == self.sle.warehouse)
 				& (sle.batch_no.isnotnull())
+				& (batch.use_batchwise_valuation == 0)
 				& (sle.is_cancelled == 0)
-				& (sle.batch_no.isin(self.non_batchwise_valuation_batches))
 			)
-			.for_update()
 			.where(timestamp_condition)
 			.groupby(sle.batch_no)
 		)
@@ -237,64 +197,20 @@ class DeprecatedBatchNoValuation:
 		if self.sle.name:
 			query = query.where(sle.name != self.sle.name)
 
-		batch_data = query.run(as_dict=True)
-		for d in batch_data:
+		for d in query.run(as_dict=True):
+			self.non_batchwise_balance_value += flt(d.batch_value)
+			self.non_batchwise_balance_qty += flt(d.batch_qty)
 			self.available_qty[d.batch_no] += flt(d.batch_qty)
-			self.total_qty[d.batch_no] += flt(d.batch_qty)
 
-		for d in batch_data:
-			if self.available_qty.get(d.batch_no):
-				self.non_batchwise_balance_value[d.batch_no] += flt(self.last_sle.stock_value)
-				self.non_batchwise_balance_qty[d.batch_no] += flt(self.last_sle.qty_after_transaction)
-
-	def get_last_sle_for_non_batch(self):
-		from erpnext.stock.utils import get_combine_datetime
-		sle = frappe.qb.DocType("Stock Ledger Entry")
-		posting_datetime = get_combine_datetime(self.sle.posting_date, self.sle.posting_time)
-		if not self.sle.creation:
-			posting_datetime = posting_datetime + datetime.timedelta(milliseconds=1)
-		timestamp_condition = sle.posting_datetime < posting_datetime
-		if self.sle.creation:
-			timestamp_condition |= (sle.posting_datetime == posting_datetime) & (
-				sle.creation < self.sle.creation
-			)
-		query = (
-			frappe.qb.from_(sle)
-			.select(
-				sle.stock_value,
-				sle.qty_after_transaction,
-				sle.stock_queue,
-			)
-			.where(
-				(sle.item_code == self.sle.item_code)
-				& (sle.warehouse == self.sle.warehouse)
-				& (sle.is_cancelled == 0)
-			)
-			.where(timestamp_condition)
-			.orderby(sle.posting_datetime, order=Order.desc)
-			.orderby(sle.creation, order=Order.desc)
-			.for_update()
-			.limit(1)
-		)
-		if self.sle.name:
-			query = query.where(sle.name != self.sle.name)
-		
-		if self.sle.serial_and_batch_bundle:
-			query = query.where(Coalesce(sle.serial_and_batch_bundle, "") != self.sle.serial_and_batch_bundle)
-
-		data = query.run(as_dict=True)
-
-		return data[0] if data else frappe._dict()
-	
 	@deprecated
 	def set_balance_value_from_bundle(self) -> None:
 		bundle = frappe.qb.DocType("Serial and Batch Bundle")
 		bundle_child = frappe.qb.DocType("Serial and Batch Entry")
 		batch = frappe.qb.DocType("Batch")
 
-		timestamp_condition = CombineDatetime(bundle.posting_date, bundle.posting_time) < CombineDatetime(
-			self.sle.posting_date, self.sle.posting_time
-		)
+		timestamp_condition = CombineDatetime(
+			bundle.posting_date, bundle.posting_time
+		) < CombineDatetime(self.sle.posting_date, self.sle.posting_time)
 
 		if self.sle.creation:
 			timestamp_condition |= (
@@ -317,12 +233,11 @@ class DeprecatedBatchNoValuation:
 				(bundle.item_code == self.sle.item_code)
 				& (bundle.warehouse == self.sle.warehouse)
 				& (bundle_child.batch_no.isnotnull())
+				& (batch.use_batchwise_valuation == 0)
 				& (bundle.is_cancelled == 0)
 				& (bundle.docstatus == 1)
 				& (bundle.type_of_transaction.isin(["Inward", "Outward"]))
-				& (bundle_child.batch_no.isin(self.non_batchwise_valuation_batches))
 			)
-			.for_update()
 			.where(timestamp_condition)
 			.groupby(bundle_child.batch_no)
 		)
@@ -332,13 +247,7 @@ class DeprecatedBatchNoValuation:
 
 		query = query.where(bundle.voucher_type != "Pick List")
 
-		batch_data = query.run(as_dict=True)
-		for d in batch_data:
+		for d in query.run(as_dict=True):
+			self.non_batchwise_balance_value += flt(d.batch_value)
+			self.non_batchwise_balance_qty += flt(d.batch_qty)
 			self.available_qty[d.batch_no] += flt(d.batch_qty)
-			self.total_qty[d.batch_no] += flt(d.batch_qty)
-
-		if not self.last_sle:
-			return
-		for batch_no in self.available_qty:
-			self.non_batchwise_balance_value[batch_no] = flt(self.last_sle.stock_value)
-			self.non_batchwise_balance_qty[batch_no] = flt(self.last_sle.qty_after_transaction)
