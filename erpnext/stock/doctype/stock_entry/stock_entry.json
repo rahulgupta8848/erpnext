@@ -1,4 +1,3 @@
-
 {
  "actions": [],
  "allow_import": 1,
@@ -50,7 +49,6 @@
   "target_address_display",
   "sb0",
   "scan_barcode",
-  "last_scanned_warehouse",
   "items_section",
   "items",
   "get_stock_and_rate",
@@ -69,6 +67,7 @@
   "supplier_address",
   "address_display",
   "accounting_dimensions_section",
+  "project",
   "other_info_tab",
   "printing_settings",
   "select_print_heading",
@@ -83,8 +82,7 @@
   "job_card",
   "amended_from",
   "credit_note",
-  "is_return",
-  "tab_connections"
+  "is_return"
  ],
  "fields": [
   {
@@ -127,7 +125,7 @@
    "label": "Purpose",
    "oldfieldname": "purpose",
    "oldfieldtype": "Select",
-   "options": "Material Issue\nMaterial Receipt\nMaterial Transfer\nMaterial Transfer for Manufacture\nMaterial Consumption for Manufacture\nManufacture\nRepack\nSend to Subcontractor\nDisassemble",
+   "options": "Material Issue\nMaterial Receipt\nMaterial Transfer\nMaterial Transfer for Manufacture\nMaterial Consumption for Manufacture\nManufacture\nRepack\nSend to Subcontractor",
    "read_only": 1,
    "search_index": 1
   },
@@ -143,7 +141,7 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval:in_list([\"Material Transfer for Manufacture\", \"Manufacture\", \"Material Consumption for Manufacture\", \"Disassemble\"], doc.purpose)",
+   "depends_on": "eval:in_list([\"Material Transfer for Manufacture\", \"Manufacture\", \"Material Consumption for Manufacture\"], doc.purpose)",
    "fieldname": "work_order",
    "fieldtype": "Link",
    "label": "Work Order",
@@ -218,7 +216,6 @@
    "search_index": 1
   },
   {
-   "default": "Now",
    "fieldname": "posting_time",
    "fieldtype": "Time",
    "label": "Posting Time",
@@ -243,7 +240,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:in_list([\"Material Issue\", \"Material Transfer\", \"Manufacture\", \"Repack\", \"Send to Subcontractor\", \"Material Transfer for Manufacture\", \"Material Consumption for Manufacture\", \"Disassemble\"], doc.purpose)",
+   "depends_on": "eval:in_list([\"Material Issue\", \"Material Transfer\", \"Manufacture\", \"Repack\", \"Send to Subcontractor\", \"Material Transfer for Manufacture\", \"Material Consumption for Manufacture\"], doc.purpose)",
    "fieldname": "from_bom",
    "fieldtype": "Check",
    "label": "From BOM",
@@ -304,12 +301,12 @@
    "depends_on": "from_warehouse",
    "fieldname": "source_warehouse_address",
    "fieldtype": "Link",
-   "label": "Source Warehouse Address Link",
+   "label": "Source Warehouse Address",
    "options": "Address"
   },
   {
    "fieldname": "source_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Source Warehouse Address",
    "read_only": 1
   },
@@ -334,12 +331,12 @@
    "depends_on": "to_warehouse",
    "fieldname": "target_warehouse_address",
    "fieldtype": "Link",
-   "label": "Target Warehouse Address Link",
+   "label": "Target Warehouse Address",
    "options": "Address"
   },
   {
    "fieldname": "target_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Target Warehouse Address",
    "read_only": 1
   },
@@ -467,7 +464,7 @@
   },
   {
    "fieldname": "address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Address"
   },
   {
@@ -503,6 +500,13 @@
    "fieldtype": "Select",
    "label": "Is Opening",
    "options": "No\nYes"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "oldfieldtype": "Link",
+   "options": "Project"
   },
   {
    "fieldname": "remarks",
@@ -670,19 +674,6 @@
   {
    "fieldname": "column_break_eaoa",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "tab_connections",
-   "fieldtype": "Tab Break",
-   "label": "Connections",
-   "show_dashboard": 1
-   },
-  {
-   "depends_on": "eval: doc.last_scanned_warehouse",
-   "fieldname": "last_scanned_warehouse",
-   "fieldtype": "Data",
-   "is_virtual": 1,
-   "label": "Last Scanned Warehouse"
   }
  ],
  "icon": "fa fa-file-text",
@@ -690,7 +681,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-08-13 19:05:42.386955",
+ "modified": "2024-03-22 16:23:13.683565",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Entry",
@@ -759,7 +750,6 @@
  "search_fields": "posting_date, from_warehouse, to_warehouse, purpose, remarks",
  "show_name_in_global_search": 1,
  "sort_field": "modified",
- "row_format": "Dynamic",
  "sort_order": "DESC",
  "states": [],
  "title_field": "stock_entry_type",

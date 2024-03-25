@@ -38,7 +38,8 @@
   "printing_settings",
   "select_print_heading",
   "letter_head",
-  "more_info"
+  "more_info",
+  "opportunity"
  ],
  "fields": [
   {
@@ -209,6 +210,14 @@
    "print_hide": 1
   },
   {
+   "fieldname": "opportunity",
+   "fieldtype": "Link",
+   "label": "Opportunity",
+   "options": "Opportunity",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
@@ -294,7 +303,7 @@
   },
   {
    "fieldname": "billing_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Billing Address Details",
    "read_only": 1
   }
@@ -303,7 +312,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-11-07 15:16:17.225738",
+ "modified": "2024-03-22 16:01:19.097788",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Request for Quotation",

@@ -22,6 +22,19 @@
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
+  "project",
+  "address_and_contact_section",
+  "supplier_address",
+  "address_display",
+  "contact_person",
+  "contact_display",
+  "contact_mobile",
+  "contact_email",
+  "column_break_19",
+  "shipping_address",
+  "shipping_address_display",
+  "billing_address",
+  "billing_address_display",
   "section_break_24",
   "column_break_25",
   "set_warehouse",
@@ -35,23 +48,10 @@
   "raw_materials_supplied_section",
   "set_reserve_warehouse",
   "supplied_items",
-  "tab_address_and_contact",
-  "supplier_address",
-  "address_display",
-  "contact_person",
-  "contact_display",
-  "contact_mobile",
-  "contact_email",
-  "column_break_19",
-  "shipping_address",
-  "shipping_address_display",
-  "billing_address",
-  "billing_address_display",
-  "tab_additional_costs",
+  "additional_costs_section",
   "distribute_additional_costs_based_on",
   "additional_costs",
   "total_additional_costs",
-  "tab_other_info",
   "order_status_section",
   "status",
   "column_break_39",
@@ -59,8 +59,7 @@
   "printing_settings_section",
   "select_print_heading",
   "column_break_43",
-  "letter_head",
-  "tab_connections"
+  "letter_head"
  ],
  "fields": [
   {
@@ -96,7 +95,7 @@
    "fieldtype": "Link",
    "in_global_search": 1,
    "in_standard_filter": 1,
-   "label": "Job Worker",
+   "label": "Supplier",
    "options": "Supplier",
    "print_hide": 1,
    "reqd": 1,
@@ -108,7 +107,7 @@
    "fieldname": "supplier_name",
    "fieldtype": "Data",
    "in_global_search": 1,
-   "label": "Job Worker Name",
+   "label": "Supplier Name",
    "read_only": 1,
    "reqd": 1
   },
@@ -116,7 +115,7 @@
    "depends_on": "supplier",
    "fieldname": "supplier_warehouse",
    "fieldtype": "Link",
-   "label": "Job Worker Warehouse",
+   "label": "Supplier Warehouse",
    "options": "Warehouse",
    "reqd": 1
   },
@@ -167,8 +166,9 @@
    "read_only": 1
   },
   {
-   "fieldname": "tab_address_and_contact",
-   "fieldtype": "Tab Break",
+   "collapsible": 1,
+   "fieldname": "address_and_contact_section",
+   "fieldtype": "Section Break",
    "label": "Address and Contact"
   },
   {
@@ -176,14 +176,14 @@
    "fetch_if_empty": 1,
    "fieldname": "supplier_address",
    "fieldtype": "Link",
-   "label": "Job Worker Address",
+   "label": "Supplier Address",
    "options": "Address",
    "print_hide": 1
   },
   {
    "fieldname": "address_display",
-   "fieldtype": "Small Text",
-   "label": "Job Worker Address Details",
+   "fieldtype": "Text Editor",
+   "label": "Supplier Address Details",
    "read_only": 1
   },
   {
@@ -191,7 +191,7 @@
    "fetch_if_empty": 1,
    "fieldname": "contact_person",
    "fieldtype": "Link",
-   "label": "Job Worker Contact",
+   "label": "Supplier Contact",
    "options": "Contact",
    "print_hide": 1
   },
@@ -230,7 +230,7 @@
   },
   {
    "fieldname": "shipping_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Shipping Address Details",
    "print_hide": 1,
    "read_only": 1
@@ -243,7 +243,7 @@
   },
   {
    "fieldname": "billing_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Billing Address Details",
    "read_only": 1
   },
@@ -337,9 +337,11 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
+   "collapsible_depends_on": "total_additional_costs",
    "depends_on": "eval:(doc.docstatus == 0 || doc.total_additional_costs)",
-   "fieldname": "tab_additional_costs",
-   "fieldtype": "Tab Break",
+   "fieldname": "additional_costs_section",
+   "fieldtype": "Section Break",
    "label": "Additional Costs"
   },
   {
@@ -443,21 +445,16 @@
    "fieldtype": "Column Break"
   },
   {
-    "fieldname": "tab_other_info",
-    "fieldtype": "Tab Break",
-    "label": "Other Info"
-  },
-  {
-    "fieldname": "tab_connections",
-    "fieldtype": "Tab Break",
-    "label": "Connections",
-    "show_dashboard": 1
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
   }
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
  "links": [],
- "modified": "2024-01-03 20:56:04.670380",
+ "modified": "2024-03-22 16:15:07.797633",
  "modified_by": "Administrator",
  "module": "Subcontracting",
  "name": "Subcontracting Order",

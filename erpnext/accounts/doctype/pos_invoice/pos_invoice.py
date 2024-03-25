@@ -6,7 +6,6 @@ import frappe
 from frappe import _, bold
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, flt, get_link_to_form, getdate, nowdate
-from frappe.utils.nestedset import get_descendants_of
 
 from erpnext.accounts.doctype.loyalty_program.loyalty_program import validate_loyalty_points
 from erpnext.accounts.doctype.payment_request.payment_request import make_payment_request
@@ -16,12 +15,7 @@ from erpnext.accounts.doctype.sales_invoice.sales_invoice import (
 	update_multi_mode_option,
 )
 from erpnext.accounts.party import get_due_date, get_party_account
-from erpnext.controllers.queries import item_query as _item_query
 from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
-
-
-class PartialPaymentValidationError(frappe.ValidationError):
-	pass
 
 
 class POSInvoice(SalesInvoice):
@@ -36,8 +30,12 @@ class POSInvoice(SalesInvoice):
 		from erpnext.accounts.doctype.payment_schedule.payment_schedule import PaymentSchedule
 		from erpnext.accounts.doctype.pos_invoice_item.pos_invoice_item import POSInvoiceItem
 		from erpnext.accounts.doctype.pricing_rule_detail.pricing_rule_detail import PricingRuleDetail
-		from erpnext.accounts.doctype.sales_invoice_advance.sales_invoice_advance import SalesInvoiceAdvance
-		from erpnext.accounts.doctype.sales_invoice_payment.sales_invoice_payment import SalesInvoicePayment
+		from erpnext.accounts.doctype.sales_invoice_advance.sales_invoice_advance import (
+			SalesInvoiceAdvance,
+		)
+		from erpnext.accounts.doctype.sales_invoice_payment.sales_invoice_payment import (
+			SalesInvoicePayment,
+		)
 		from erpnext.accounts.doctype.sales_invoice_timesheet.sales_invoice_timesheet import (
 			SalesInvoiceTimesheet,
 		)
@@ -49,7 +47,7 @@ class POSInvoice(SalesInvoice):
 
 		account_for_change_amount: DF.Link | None
 		additional_discount_percentage: DF.Float
-		address_display: DF.SmallText | None
+		address_display: DF.TextEditor | None
 		advances: DF.Table[SalesInvoiceAdvance]
 		against_income_account: DF.SmallText | None
 		allocate_advances_automatically: DF.Check
@@ -74,8 +72,7 @@ class POSInvoice(SalesInvoice):
 		commission_rate: DF.Float
 		company: DF.Link
 		company_address: DF.Link | None
-		company_address_display: DF.SmallText | None
-		company_contact_person: DF.Link | None
+		company_address_display: DF.TextEditor | None
 		consolidated_invoice: DF.Link | None
 		contact_display: DF.SmallText | None
 		contact_email: DF.Data | None
@@ -141,7 +138,7 @@ class POSInvoice(SalesInvoice):
 		selling_price_list: DF.Link
 		set_posting_time: DF.Check
 		set_warehouse: DF.Link | None
-		shipping_address: DF.SmallText | None
+		shipping_address: DF.TextEditor | None
 		shipping_address_name: DF.Link | None
 		shipping_rule: DF.Link | None
 		source: DF.Link | None
@@ -186,17 +183,16 @@ class POSInvoice(SalesInvoice):
 	# end: auto-generated types
 
 	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
+		super(POSInvoice, self).__init__(*args, **kwargs)
 
 	def validate(self):
 		if not cint(self.is_pos):
 			frappe.throw(
-				_("POS Invoice should have the field {0} checked.").format(frappe.bold(_("Include Payment")))
+				_("POS Invoice should have {} field checked.").format(frappe.bold("Include Payment"))
 			)
 
 		# run on validate method of selling controller
 		super(SalesInvoice, self).validate()
-		self.validate_pos_opening_entry()
 		self.validate_auto_set_posting_time()
 		self.validate_mode_of_payment()
 		self.validate_uom_is_integer("stock_uom", "stock_qty")
@@ -215,8 +211,6 @@ class POSInvoice(SalesInvoice):
 		self.validate_payment_amount()
 		self.validate_loyalty_transaction()
 		self.validate_company_with_pos_company()
-		self.validate_full_payment()
-		self.update_packing_list()
 		if self.coupon_code:
 			from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
 
@@ -234,10 +228,7 @@ class POSInvoice(SalesInvoice):
 			self.apply_loyalty_points()
 		self.check_phone_payments()
 		self.set_status(update=True)
-		self.make_bundle_for_sales_purchase_return()
-		for table_name in ["items", "packed_items"]:
-			self.make_bundle_using_old_serial_batch_fields(table_name)
-			self.submit_serial_batch_bundle(table_name)
+		self.submit_serial_batch_bundle()
 
 		if self.coupon_code:
 			from erpnext.accounts.doctype.pricing_rule.utils import update_coupon_code_count
@@ -274,8 +265,6 @@ class POSInvoice(SalesInvoice):
 			against_psi_doc.delete_loyalty_point_entry()
 			against_psi_doc.make_loyalty_point_entry()
 
-		self.db_set("status", "Cancelled")
-
 		if self.coupon_code:
 			from erpnext.accounts.doctype.pricing_rule.utils import update_coupon_code_count
 
@@ -293,11 +282,10 @@ class POSInvoice(SalesInvoice):
 						{"is_cancelled": 1, "voucher_no": ""},
 					)
 
-				frappe.get_doc("Serial and Batch Bundle", row.serial_and_batch_bundle).cancel()
 				row.db_set("serial_and_batch_bundle", None)
 
-	def submit_serial_batch_bundle(self, table_name):
-		for item in self.get(table_name):
+	def submit_serial_batch_bundle(self):
+		for item in self.items:
 			if item.serial_and_batch_bundle:
 				doc = frappe.get_doc("Serial and Batch Bundle", item.serial_and_batch_bundle)
 
@@ -320,21 +308,7 @@ class POSInvoice(SalesInvoice):
 				)
 
 				if paid_amt and pay.amount != paid_amt:
-					return frappe.throw(
-						_("Payment related to {0} is not completed").format(pay.mode_of_payment)
-					)
-
-	def validate_pos_opening_entry(self):
-		opening_entries = frappe.get_list(
-			"POS Opening Entry", filters={"pos_profile": self.pos_profile, "status": "Open", "docstatus": 1}
-		)
-		if len(opening_entries) == 0:
-			frappe.throw(
-				title=_("POS Opening Entry Missing"),
-				msg=_("No open POS Opening Entry found for POS Profile {0}.").format(
-					frappe.bold(self.pos_profile)
-				),
-			)
+					return frappe.throw(_("Payment related to {0} is not completed").format(pay.mode_of_payment))
 
 	def validate_stock_availablility(self):
 		if self.is_return:
@@ -354,7 +328,7 @@ class POSInvoice(SalesInvoice):
 
 				available_stock, is_stock_item = get_stock_availability(d.item_code, d.warehouse)
 
-				item_code, warehouse, _qty = (
+				item_code, warehouse, qty = (
 					frappe.bold(d.item_code),
 					frappe.bold(d.warehouse),
 					frappe.bold(d.qty),
@@ -368,9 +342,9 @@ class POSInvoice(SalesInvoice):
 					)
 				elif is_stock_item and flt(available_stock) < flt(d.stock_qty):
 					frappe.throw(
-						_("Row #{}: Stock quantity not enough for Item Code: {} under warehouse {}.").format(
-							d.idx, item_code, warehouse
-						),
+						_(
+							"Row #{}: Stock quantity not enough for Item Code: {} under warehouse {}. Available quantity {}."
+						).format(d.idx, item_code, warehouse, available_stock),
 						title=_("Item Unavailable"),
 					)
 
@@ -378,16 +352,10 @@ class POSInvoice(SalesInvoice):
 		error_msg = []
 		for d in self.get("items"):
 			error_msg = ""
-			if d.get("has_serial_no") and (
-				(not d.use_serial_batch_fields and not d.serial_and_batch_bundle)
-				or (d.use_serial_batch_fields and not d.serial_no)
-			):
+			if d.get("has_serial_no") and not d.serial_and_batch_bundle:
 				error_msg = f"Row #{d.idx}: Please select Serial No. for item {bold(d.item_code)}"
 
-			elif d.get("has_batch_no") and (
-				(not d.use_serial_batch_fields and not d.serial_and_batch_bundle)
-				or (d.use_serial_batch_fields and not d.batch_no)
-			):
+			elif d.get("has_batch_no") and not d.serial_and_batch_bundle:
 				error_msg = f"Row #{d.idx}: Please select Batch No. for item {bold(d.item_code)}"
 
 		if error_msg:
@@ -401,7 +369,7 @@ class POSInvoice(SalesInvoice):
 			if d.get("qty") > 0:
 				frappe.throw(
 					_(
-						"Row #{}: You cannot add postive quantities in a return invoice. Please remove item {} to complete the return."
+						"Row #{}: You cannot add positive quantities in a return invoice. Please remove item {} to complete the return."
 					).format(d.idx, frappe.bold(d.item_code)),
 					title=_("Invalid Item"),
 				)
@@ -440,7 +408,8 @@ class POSInvoice(SalesInvoice):
 		if (
 			self.change_amount
 			and self.account_for_change_amount
-			and frappe.get_cached_value("Account", self.account_for_change_amount, "company") != self.company
+			and frappe.get_cached_value("Account", self.account_for_change_amount, "company")
+			!= self.company
 		):
 			frappe.throw(
 				_("The selected change account {} doesn't belongs to Company {}.").format(
@@ -469,9 +438,8 @@ class POSInvoice(SalesInvoice):
 			if self.is_return and entry.amount > 0:
 				frappe.throw(_("Row #{0} (Payment Table): Amount must be negative").format(entry.idx))
 
-		if self.is_return and self.docstatus != 0:
+		if self.is_return:
 			invoice_total = self.rounded_total or self.grand_total
-			total_amount_in_payments = flt(total_amount_in_payments, self.precision("grand_total"))
 			if total_amount_in_payments and total_amount_in_payments < invoice_total:
 				frappe.throw(_("Total payments amount can't be greater than {}").format(-invoice_total))
 
@@ -497,23 +465,6 @@ class POSInvoice(SalesInvoice):
 
 		if self.redeem_loyalty_points and self.loyalty_program and self.loyalty_points:
 			validate_loyalty_points(self, self.loyalty_points)
-
-	def validate_full_payment(self):
-		invoice_total = flt(self.rounded_total) or flt(self.grand_total)
-		is_partial_payment_allowed = frappe.db.get_value(
-			"POS Profile", self.pos_profile, "allow_partial_payment"
-		)
-
-		if self.docstatus == 1 and not is_partial_payment_allowed:
-			if self.is_return and self.paid_amount != invoice_total:
-				frappe.throw(
-					msg=_("Partial Payment in POS Invoice is not allowed."), exc=PartialPaymentValidationError
-				)
-
-			if self.paid_amount < invoice_total:
-				frappe.throw(
-					msg=_("Partial Payment in POS Invoice is not allowed."), exc=PartialPaymentValidationError
-				)
 
 	def set_status(self, update=False, status=None, update_modified=True):
 		if self.is_new():
@@ -668,13 +619,7 @@ class POSInvoice(SalesInvoice):
 				"Account", self.debit_to, "account_currency"
 			)
 		if not self.due_date and self.customer:
-			self.due_date = get_due_date(
-				self.posting_date,
-				"Customer",
-				self.customer,
-				self.company,
-				template_name=self.payment_terms_template,
-			)
+			self.due_date = get_due_date(self.posting_date, "Customer", self.customer, self.company)
 
 		super(SalesInvoice, self).set_missing_values(for_validate)
 
@@ -687,7 +632,6 @@ class POSInvoice(SalesInvoice):
 				"print_format": print_format,
 				"campaign": profile.get("campaign"),
 				"allow_print_before_pay": profile.get("allow_print_before_pay"),
-				"skip_default_payment": profile.get("disable_grand_total_to_default_mop"),
 			}
 
 	@frappe.whitelist()
@@ -782,8 +726,10 @@ def get_bundle_availability(bundle_item_code, warehouse):
 	bundle_bin_qty = 1000000
 	for item in product_bundle.items:
 		item_bin_qty = get_bin_qty(item.item_code, warehouse)
+		item_pos_reserved_qty = get_pos_reserved_qty(item.item_code, warehouse)
+		available_qty = item_bin_qty - item_pos_reserved_qty
 
-		max_available_bundles = item_bin_qty / item.qty
+		max_available_bundles = available_qty / item.qty
 		if bundle_bin_qty > max_available_bundles and frappe.get_value(
 			"Item", item.item_code, "is_stock_item"
 		):
@@ -806,49 +752,13 @@ def get_bin_qty(item_code, warehouse):
 
 
 def get_pos_reserved_qty(item_code, warehouse):
-	"""
-	Calculate total quantity reserved for the given item and warehouse.
-
-	Includes:
-	- Direct sales of the item in submitted POS Invoices
-	- Sales of the item as a component of a Product Bundle
-
-	Excludes consolidated invoices (already merged into Sales Invoices via
-	POS Closing Entry). Used to reflect near real-time availability in the
-	POS UI and to prevent overselling while multiple sessions may be active.
-	"""
-	pinv_item_reserved_qty = get_pos_reserved_qty_from_table("POS Invoice Item", item_code, warehouse)
-	packed_item_reserved_qty = get_pos_reserved_qty_from_table("Packed Item", item_code, warehouse)
-
-	reserved_qty = pinv_item_reserved_qty + packed_item_reserved_qty
-
-	return reserved_qty
-
-
-def get_pos_reserved_qty_from_table(child_table, item_code, warehouse):
-	"""
-	Get the total reserved quantity for a given item in POS Invoices
-	from a specific child table.
-
-	Args:
-	  child_table (str): Name of the child table to query
-	                (e.g., "POS Invoice Item", "Packed Item").
-	  item_code (str): The Item Code to filter by.
-	  warehouse (str): The Warehouse to filter by.
-
-	Returns:
-	  float: The total reserved quantity for the item in the given
-	                warehouse from submitted, unconsolidated POS Invoices.
-	"""
 	p_inv = frappe.qb.DocType("POS Invoice")
-	p_item = frappe.qb.DocType(child_table)
-
-	qty_column = "qty" if child_table == "Packed Item" else "stock_qty"
+	p_item = frappe.qb.DocType("POS Invoice Item")
 
 	reserved_qty = (
 		frappe.qb.from_(p_inv)
 		.from_(p_item)
-		.select(Sum(p_item[qty_column]).as_("stock_qty"))
+		.select(Sum(p_item.stock_qty).as_("stock_qty"))
 		.where(
 			(p_inv.name == p_item.parent)
 			& (IfNull(p_inv.consolidated_invoice, "") == "")
@@ -876,7 +786,7 @@ def make_merge_log(invoices):
 		invoices = json.loads(invoices)
 
 	if len(invoices) == 0:
-		frappe.throw(_("Atleast one invoice has to be selected."))
+		frappe.throw(_("At least one invoice has to be selected."))
 
 	merge_log = frappe.new_doc("POS Invoice Merge Log")
 	merge_log.posting_date = getdate(nowdate())
@@ -915,30 +825,3 @@ def add_return_modes(doc, pos_profile):
 		]:
 			payment_mode = get_mode_of_payment_info(mode_of_payment, doc.company)
 			append_payment(payment_mode[0])
-
-
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
-	if pos_profile := filters.get("pos_profile")[1]:
-		pos_profile = frappe.get_cached_doc("POS Profile", pos_profile)
-		if item_groups := get_item_group(pos_profile):
-			filters["item_group"] = ["in", tuple(item_groups)]
-
-		del filters["pos_profile"]
-
-	else:
-		filters.pop("pos_profile", None)
-
-	return _item_query(doctype, txt, searchfield, start, page_len, filters, as_dict)
-
-
-def get_item_group(pos_profile):
-	item_groups = []
-	if pos_profile.get("item_groups"):
-		# Get items based on the item groups defined in the POS profile
-		for row in pos_profile.get("item_groups"):
-			item_groups.append(row.item_group)
-			item_groups.extend(get_descendants_of("Item Group", row.item_group))
-
-	return list(set(item_groups))

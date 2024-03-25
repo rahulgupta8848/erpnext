@@ -19,6 +19,16 @@
   "currency",
   "column_break_11",
   "conversion_rate",
+  "address_and_contact_section",
+  "customer_address",
+  "address_display",
+  "contact_person",
+  "contact_display",
+  "column_break_16",
+  "company_address",
+  "company_address_display",
+  "contact_mobile",
+  "contact_email",
   "section_break_6",
   "dunning_type",
   "column_break_8",
@@ -46,21 +56,7 @@
   "income_account",
   "column_break_48",
   "cost_center",
-  "amended_from",
-  "address_and_contact_tab",
-  "address_and_contact_section",
-  "customer_address",
-  "address_display",
-  "column_break_vodj",
-  "contact_person",
-  "contact_display",
-  "contact_mobile",
-  "contact_email",
-  "section_break_xban",
-  "column_break_16",
-  "company_address",
-  "company_address_display",
-  "column_break_lqmf"
+  "amended_from"
  ],
  "fields": [
   {
@@ -182,12 +178,14 @@
    "label": "Rate of Interest (%) Yearly"
   },
   {
+   "collapsible": 1,
    "fieldname": "address_and_contact_section",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Address and Contact"
   },
   {
    "fieldname": "address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Address",
    "read_only": 1
   },
@@ -206,7 +204,7 @@
   },
   {
    "fieldname": "company_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Company Address Display",
    "read_only": 1
   },
@@ -379,28 +377,11 @@
   {
    "fieldname": "column_break_48",
    "fieldtype": "Column Break"
-	},
-	{
-		"fieldname": "address_and_contact_tab",
-		"fieldtype": "Tab Break",
-		"label": "Address & Contact"
-	},
-	{
-		"fieldname": "column_break_vodj",
-		"fieldtype": "Column Break"
-	},
-	{
-		"fieldname": "section_break_xban",
-		"fieldtype": "Section Break"
-	},
-	{
-		"fieldname": "column_break_lqmf",
-		"fieldtype": "Column Break"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2024-11-26 13:46:07.760867",
+ "modified": "2024-03-22 16:01:13.231067",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Dunning",
