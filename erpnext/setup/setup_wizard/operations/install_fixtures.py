@@ -66,54 +66,29 @@ def install(country=None):
 			"parent_item_group": _("All Item Groups"),
 		},
 		# Stock Entry Type
-		{
-			"doctype": "Stock Entry Type",
-			"name": "Material Issue",
-			"purpose": "Material Issue",
-			"is_standard": 1,
-		},
-		{
-			"doctype": "Stock Entry Type",
-			"name": "Material Receipt",
-			"purpose": "Material Receipt",
-			"is_standard": 1,
-		},
+		{"doctype": "Stock Entry Type", "name": "Material Issue", "purpose": "Material Issue"},
+		{"doctype": "Stock Entry Type", "name": "Material Receipt", "purpose": "Material Receipt"},
 		{
 			"doctype": "Stock Entry Type",
 			"name": "Material Transfer",
 			"purpose": "Material Transfer",
-			"is_standard": 1,
 		},
-		{
-			"doctype": "Stock Entry Type",
-			"name": "Manufacture",
-			"purpose": "Manufacture",
-			"is_standard": 1,
-		},
-		{
-			"doctype": "Stock Entry Type",
-			"name": "Repack",
-			"purpose": "Repack",
-			"is_standard": 1,
-		},
-		{"doctype": "Stock Entry Type", "name": "Disassemble", "purpose": "Disassemble", "is_standard": 1},
+		{"doctype": "Stock Entry Type", "name": "Manufacture", "purpose": "Manufacture"},
+		{"doctype": "Stock Entry Type", "name": "Repack", "purpose": "Repack"},
 		{
 			"doctype": "Stock Entry Type",
 			"name": "Send to Subcontractor",
 			"purpose": "Send to Subcontractor",
-			"is_standard": 1,
 		},
 		{
 			"doctype": "Stock Entry Type",
 			"name": "Material Transfer for Manufacture",
 			"purpose": "Material Transfer for Manufacture",
-			"is_standard": 1,
 		},
 		{
 			"doctype": "Stock Entry Type",
 			"name": "Material Consumption for Manufacture",
 			"purpose": "Material Consumption for Manufacture",
-			"is_standard": 1,
 		},
 		# territory: with two default territories, one for home country and one named Rest of the World
 		{
@@ -217,7 +192,13 @@ def install(country=None):
 			"is_group": 0,
 			"parent_supplier_group": _("All Supplier Groups"),
 		},
-		
+		# Sales Person
+		{
+			"doctype": "Sales Person",
+			"sales_person_name": _("Sales Team"),
+			"is_group": 1,
+			"parent_sales_person": "",
+		},
 		# Mode of Payment
 		{
 			"doctype": "Mode of Payment",
@@ -229,6 +210,11 @@ def install(country=None):
 		{"doctype": "Mode of Payment", "mode_of_payment": _("Wire Transfer"), "type": "Bank"},
 		{"doctype": "Mode of Payment", "mode_of_payment": _("Bank Draft"), "type": "Bank"},
 		# Activity Type
+		{"doctype": "Activity Type", "activity_type": _("Planning")},
+		{"doctype": "Activity Type", "activity_type": _("Research")},
+		{"doctype": "Activity Type", "activity_type": _("Proposal Writing")},
+		{"doctype": "Activity Type", "activity_type": _("Execution")},
+		{"doctype": "Activity Type", "activity_type": _("Communication")},
 		{
 			"doctype": "Item Attribute",
 			"attribute_name": _("Size"),
@@ -255,30 +241,44 @@ def install(country=None):
 		{"doctype": "Issue Priority", "name": _("Low")},
 		{"doctype": "Issue Priority", "name": _("Medium")},
 		{"doctype": "Issue Priority", "name": _("High")},
+		{"doctype": "Email Account", "email_id": "sales@example.com", "append_to": "Opportunity"},
+		{"doctype": "Email Account", "email_id": "support@example.com", "append_to": "Issue"},
 		{"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"},
 		{"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"},
 		{"doctype": "Party Type", "party_type": "Employee", "account_type": "Payable"},
 		{"doctype": "Party Type", "party_type": "Shareholder", "account_type": "Payable"},
-	
+		{"doctype": "Opportunity Type", "name": _("Sales")},
+		{"doctype": "Opportunity Type", "name": _("Support")},
+		{"doctype": "Opportunity Type", "name": _("Maintenance")},
+		{"doctype": "Project Type", "project_type": "Internal"},
+		{"doctype": "Project Type", "project_type": "External"},
+		{"doctype": "Project Type", "project_type": "Other"},
 		{"doctype": "Print Heading", "print_heading": _("Credit Note")},
 		{"doctype": "Print Heading", "print_heading": _("Debit Note")},
 		# Share Management
 		{"doctype": "Share Type", "title": _("Equity")},
 		{"doctype": "Share Type", "title": _("Preference")},
 		# Market Segments
-
+		{"doctype": "Market Segment", "market_segment": _("Lower Income")},
+		{"doctype": "Market Segment", "market_segment": _("Middle Income")},
+		{"doctype": "Market Segment", "market_segment": _("Upper Income")},
 		# Warehouse Type
 		{"doctype": "Warehouse Type", "name": "Transit"},
 	]
 
 	for doctype, title_field, filename in (
 		("Designation", "designation_name", "designation.txt"),
+		("Sales Stage", "stage_name", "sales_stage.txt"),
 		("Industry Type", "industry", "industry_type.txt"),
+		("Lead Source", "source_name", "lead_source.txt"),
+		("Sales Partner Type", "sales_partner_type", "sales_partner_type.txt"),
 	):
 		records += [{"doctype": doctype, title_field: title} for title in read_lines(filename)]
 
 	base_path = frappe.get_app_path("erpnext", "stock", "doctype")
-	response = frappe.read_file(os.path.join(base_path, "delivery_trip/dispatch_notification_template.html"))
+	response = frappe.read_file(
+		os.path.join(base_path, "delivery_trip/dispatch_notification_template.html")
+	)
 
 	records += [
 		{
@@ -380,7 +380,14 @@ def add_market_segments():
 def add_sale_stages():
 	# Sale Stages
 	records = [
-		
+		{"doctype": "Sales Stage", "stage_name": _("Prospecting")},
+		{"doctype": "Sales Stage", "stage_name": _("Qualification")},
+		{"doctype": "Sales Stage", "stage_name": _("Needs Analysis")},
+		{"doctype": "Sales Stage", "stage_name": _("Value Proposition")},
+		{"doctype": "Sales Stage", "stage_name": _("Identifying Decision Makers")},
+		{"doctype": "Sales Stage", "stage_name": _("Perception Analysis")},
+		{"doctype": "Sales Stage", "stage_name": _("Proposal/Price Quote")},
+		{"doctype": "Sales Stage", "stage_name": _("Negotiation/Review")},
 	]
 	for sales_stage in records:
 		frappe.get_doc(sales_stage).db_insert()
@@ -446,19 +453,14 @@ def install_defaults(args=None):  # nosemgrep
 	create_bank_account(args)
 
 
-def set_global_defaults(kwargs):
+def set_global_defaults(args):
 	global_defaults = frappe.get_doc("Global Defaults", "Global Defaults")
-	company = frappe.db.get_value(
-		"Company",
-		{"company_name": kwargs.get("company_name")},
-		"name",
-	)
 
 	global_defaults.update(
 		{
-			"default_currency": kwargs.get("currency"),
-			"default_company": company,
-			"country": kwargs.get("country"),
+			"default_currency": args.get("currency"),
+			"default_company": args.get("company_name"),
+			"country": args.get("country"),
 		}
 	)
 
@@ -469,21 +471,19 @@ def update_stock_settings():
 	stock_settings = frappe.get_doc("Stock Settings")
 	stock_settings.item_naming_by = "Item Code"
 	stock_settings.valuation_method = "FIFO"
-	stock_settings.default_warehouse = frappe.db.get_value("Warehouse", {"warehouse_name": _("Stores")})
-	stock_settings.stock_uom = _("Nos")
+	stock_settings.default_warehouse = frappe.db.get_value(
+		"Warehouse", {"warehouse_name": _("Stores")}
+	)
+	stock_settings.stock_uom = "Nos"
 	stock_settings.auto_indent = 1
 	stock_settings.auto_insert_price_list_rate_if_missing = 1
-	stock_settings.update_price_list_based_on = "Rate"
 	stock_settings.set_qty_in_transactions_based_on_serial_no_input = 1
-	stock_settings.flags.ignore_permissions = True
 	stock_settings.save()
 
 
-def create_bank_account(args, demo=False):
+def create_bank_account(args):
 	if not args.get("bank_account"):
-		if not demo:
-			return
-		args["bank_account"] = _("Demo Bank Account")
+		args["bank_account"] = _("Bank Account")
 
 	company_name = args.get("company_name")
 	bank_account_group = frappe.db.get_value(
