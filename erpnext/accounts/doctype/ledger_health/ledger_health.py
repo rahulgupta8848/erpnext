@@ -11,12 +11,10 @@ class LedgerHealth(Document):
 
 	from typing import TYPE_CHECKING
 
-	if TYPE_CHECKING: # pragma: no cover
+	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		checked_on: DF.Datetime | None
 		debit_credit_mismatch: DF.Check
-		general_and_payment_ledger_mismatch: DF.Check
 		name: DF.Int | None
 		voucher_no: DF.Data | None
 		voucher_type: DF.Data | None
