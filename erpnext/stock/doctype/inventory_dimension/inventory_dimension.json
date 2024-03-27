@@ -60,6 +60,7 @@
    "label": "Applicable For"
   },
   {
+   "depends_on": "eval:!doc.apply_to_all_doctypes",
    "fieldname": "document_type",
    "fieldtype": "Link",
    "label": "Apply to Document",
@@ -188,7 +189,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-07-08 08:58:50.228211",
+ "modified": "2024-03-27 13:09:52.561725",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Inventory Dimension",
@@ -220,11 +221,19 @@
    "write": 1
   },
   {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
    "read": 1,
-   "role": "Stock User"
+   "report": 1,
+   "role": "Stock User",
+   "share": 1,
+   "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
 }

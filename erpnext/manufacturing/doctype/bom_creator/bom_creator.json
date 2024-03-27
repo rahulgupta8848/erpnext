@@ -17,6 +17,7 @@
   "item_group",
   "column_break_ikj7",
   "qty",
+  "project",
   "uom",
   "raw_materials_tab",
   "currency_detail",
@@ -65,7 +66,7 @@
    "fieldname": "rm_cost_as_per",
    "fieldtype": "Select",
    "label": "Rate Of Materials Based On",
-   "options": "Valuation Rate\nLast Purchase Rate\nPrice List",
+   "options": "Valuation Rate\nLast Purchase Rate\nPrice List\nManual",
    "reqd": 1
   },
   {
@@ -148,6 +149,12 @@
   {
    "fieldname": "column_break_ikj7",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
   },
   {
    "fieldname": "item_code",
@@ -273,7 +280,6 @@
    "read_only": 1
   }
  ],
- "hide_toolbar": 1,
  "icon": "fa fa-sitemap",
  "is_submittable": 1,
  "links": [
@@ -282,7 +288,7 @@
    "link_fieldname": "bom_creator"
   }
  ],
- "modified": "2024-09-21 09:05:52.945112",
+ "modified": "2024-03-27 13:06:40.535884",
  "modified_by": "Administrator",
  "module": "Manufacturing",
  "name": "BOM Creator",
@@ -317,7 +323,7 @@
   }
  ],
  "show_name_in_global_search": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

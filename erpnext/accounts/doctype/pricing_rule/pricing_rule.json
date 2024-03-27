@@ -35,6 +35,8 @@
   "customer",
   "customer_group",
   "territory",
+  "sales_partner",
+  "campaign",
   "supplier",
   "supplier_group",
   "section_break_19",
@@ -51,8 +53,6 @@
   "column_break_42",
   "free_item_uom",
   "round_free_qty",
-  "enforce_free_item_qty",
-  "dont_enforce_free_item_qty",
   "is_recursive",
   "recurse_for",
   "apply_recursion_over",
@@ -74,21 +74,15 @@
   "discount_amount",
   "discount_percentage",
   "for_price_list",
-  "dynamic_condition_tab",
-  "condition",
   "section_break_13",
+  "threshold_percentage",
+  "priority",
+  "condition",
+  "column_break_66",
   "apply_multiple_pricing_rules",
   "apply_discount_on_rate",
-  "column_break_66",
-  "threshold_percentage",
-  "validate_pricing_rule_section",
   "validate_applied_rule",
-  "column_break_texp",
   "rule_description",
-  "priority_section",
-  "has_priority",
-  "column_break_sayg",
-  "priority",
   "help_section",
   "pricing_rule_help",
   "reference_section",
@@ -173,7 +167,6 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.apply_on != 'Transaction'",
    "fieldname": "is_cumulative",
    "fieldtype": "Check",
    "label": "Is Cumulative"
@@ -248,7 +241,7 @@
    "fieldname": "applicable_for",
    "fieldtype": "Select",
    "label": "Applicable For",
-   "options": "\nCustomer\nCustomer Group\nTerritory\nSupplier\nSupplier Group"
+   "options": "\nCustomer\nCustomer Group\nTerritory\nSales Partner\nCampaign\nSupplier\nSupplier Group"
   },
   {
    "depends_on": "eval:doc.applicable_for==\"Customer\"",
@@ -270,6 +263,20 @@
    "fieldtype": "Link",
    "label": "Territory",
    "options": "Territory"
+  },
+  {
+   "depends_on": "eval:doc.applicable_for==\"Sales Partner\"",
+   "fieldname": "sales_partner",
+   "fieldtype": "Link",
+   "label": "Sales Partner",
+   "options": "Sales Partner"
+  },
+  {
+   "depends_on": "eval:doc.applicable_for==\"Campaign\"",
+   "fieldname": "campaign",
+   "fieldtype": "Link",
+   "label": "Campaign",
+   "options": "Campaign"
   },
   {
    "depends_on": "eval:doc.applicable_for==\"Supplier\"",
@@ -332,7 +339,7 @@
   {
    "fieldname": "valid_upto",
    "fieldtype": "Date",
-   "label": "Valid Upto"
+   "label": "Valid Up To"
   },
   {
    "fieldname": "col_break1",
@@ -406,8 +413,7 @@
    "depends_on": "eval:doc.rate_or_discount==\"Rate\"",
    "fieldname": "rate",
    "fieldtype": "Currency",
-   "label": "Rate",
-   "options": "currency"
+   "label": "Rate"
   },
   {
    "default": "0",
@@ -471,7 +477,7 @@
   {
    "collapsible": 1,
    "fieldname": "section_break_13",
-   "fieldtype": "Tab Break",
+   "fieldtype": "Section Break",
    "label": "Advanced Settings"
   },
   {
@@ -481,7 +487,6 @@
    "label": "Threshold for Suggestion (In Percentage)"
   },
   {
-   "depends_on": "has_priority",
    "description": "Higher the number, higher the priority",
    "fieldname": "priority",
    "fieldtype": "Select",
@@ -508,7 +513,6 @@
   {
    "default": "0",
    "depends_on": "eval:doc.price_or_product_discount == 'Price'",
-   "description": "If enabled, then system will only validate the pricing rule and not apply automatically. User has to manually set the discount percentage / margin / free items to validate the pricing rule",
    "fieldname": "validate_applied_rule",
    "fieldtype": "Check",
    "label": "Validate Applied Rule"
@@ -521,8 +525,7 @@
   },
   {
    "fieldname": "help_section",
-   "fieldtype": "Tab Break",
-   "label": "Help Article",
+   "fieldtype": "Section Break",
    "options": "Simple"
   },
   {
@@ -600,56 +603,12 @@
    "fieldname": "apply_recursion_over",
    "fieldtype": "Float",
    "label": "Apply Recursion Over (As Per Transaction UOM)"
-  },
-  {
-   "fieldname": "priority_section",
-   "fieldtype": "Section Break",
-   "label": "Priority"
-  },
-  {
-   "fieldname": "dynamic_condition_tab",
-   "fieldtype": "Tab Break",
-   "label": "Dynamic Condition"
-  },
-  {
-   "fieldname": "validate_pricing_rule_section",
-   "fieldtype": "Section Break",
-   "label": "Validate Pricing Rule"
-  },
-  {
-   "fieldname": "column_break_texp",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_sayg",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "description": "Enable this checkbox even if you want to set the zero priority",
-   "fieldname": "has_priority",
-   "fieldtype": "Check",
-   "label": "Has Priority"
-  },
-  {
-   "default": "1",
-   "depends_on": "eval:doc.price_or_product_discount == 'Product'",
-   "fieldname": "enforce_free_item_qty",
-   "fieldtype": "Check",
-   "label": "Enforce Free Item Qty"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.price_or_product_discount == 'Product'",
-   "fieldname": "dont_enforce_free_item_qty",
-   "fieldtype": "Check",
-   "label": "Don't Enforce Free Item Qty"
-}
+  }
  ],
  "icon": "fa fa-gift",
  "idx": 1,
  "links": [],
- "modified": "2025-02-05 21:03:22.103044",
+ "modified": "2024-03-27 13:10:17.521896",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Pricing Rule",
@@ -707,7 +666,7 @@
   }
  ],
  "show_name_in_global_search": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "title"

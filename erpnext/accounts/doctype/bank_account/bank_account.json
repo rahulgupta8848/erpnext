@@ -34,11 +34,7 @@
   "integration_id",
   "last_integration_date",
   "column_break_27",
-  "mask",
-  "transaction_details_section",
-  "opening_balance_as_per_bank_statement",
-  "column_break_ebwe",
-  "opening_balance_date"
+  "mask"
  ],
  "fields": [
   {
@@ -136,8 +132,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "IBAN",
-   "length": 34,
-   "options": "IBAN"
+   "length": 30
   },
   {
    "fieldname": "column_break_12",
@@ -211,71 +206,10 @@
    "fieldname": "disabled",
    "fieldtype": "Check",
    "label": "Disabled"
-  },
-  {
-   "fieldname": "transaction_details_section",
-   "fieldtype": "Section Break",
-   "label": "Transaction Details"
-  },
-  {
-   "fieldname": "opening_balance_as_per_bank_statement",
-   "fieldtype": "Currency",
-   "label": "Opening Balance as per Bank Statement"
-  },
-  {
-   "fieldname": "column_break_ebwe",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "opening_balance_date",
-   "fieldtype": "Date",
-   "label": "Opening Balance Date"
   }
  ],
- "grid_page_length": 50,
- "links": [
-  {
-   "group": "Transactions",
-   "link_doctype": "Payment Request",
-   "link_fieldname": "bank_account"
-  },
-  {
-   "group": "Transactions",
-   "link_doctype": "Payment Order",
-   "link_fieldname": "bank_account"
-  },
-  {
-   "group": "Transactions",
-   "link_doctype": "Bank Guarantee",
-   "link_fieldname": "bank_account"
-  },
-  {
-   "group": "Transactions",
-   "link_doctype": "Bank Transaction",
-   "link_fieldname": "bank_account"
-  },
-  {
-   "group": "Accounting",
-   "link_doctype": "Payment Entry",
-   "link_fieldname": "bank_account"
-  },
-  {
-   "group": "Accounting",
-   "link_doctype": "Journal Entry",
-   "link_fieldname": "bank_account"
-  },
-  {
-   "group": "Party",
-   "link_doctype": "Customer",
-   "link_fieldname": "default_bank_account"
-  },
-  {
-   "group": "Party",
-   "link_doctype": "Supplier",
-   "link_fieldname": "default_bank_account"
-  }
- ],
- "modified": "2025-08-29 12:32:01.081687",
+ "links": [],
+ "modified": "2024-03-27 13:06:37.049542",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Account",
@@ -307,9 +241,8 @@
    "write": 1
   }
  ],
- "row_format": "Dynamic",
  "search_fields": "bank,account",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

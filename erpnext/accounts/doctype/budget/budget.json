@@ -7,10 +7,11 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "naming_series",
   "budget_against",
   "company",
   "cost_center",
+  "naming_series",
+  "project",
   "fiscal_year",
   "column_break_3",
   "monthly_distribution",
@@ -38,7 +39,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Budget Against",
-   "options": "\nCost Center",
+   "options": "\nCost Center\nProject",
    "reqd": 1
   },
   {
@@ -58,6 +59,14 @@
    "in_standard_filter": 1,
    "label": "Cost Center",
    "options": "Cost Center"
+  },
+  {
+   "depends_on": "eval:doc.budget_against == 'Project'",
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Project",
+   "options": "Project"
   },
   {
    "fieldname": "fiscal_year",
@@ -186,19 +195,19 @@
   },
   {
    "fieldname": "naming_series",
-   "fieldtype": "Select",
+   "fieldtype": "Data",
+   "hidden": 1,
    "label": "Series",
    "no_copy": 1,
-   "options": "BUDGET-.YYYY.-",
    "print_hide": 1,
-   "reqd": 1,
+   "read_only": 1,
    "set_only_once": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-16 15:57:13.114981",
+ "modified": "2024-03-27 13:06:42.675933",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Budget",
@@ -222,7 +231,7 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

@@ -8,6 +8,7 @@
   "send_to",
   "customer",
   "supplier",
+  "sales_partner",
   "department",
   "branch",
   "create_receiver_list",
@@ -41,6 +42,13 @@
    "in_list_view": 1,
    "label": "Supplier",
    "options": "Supplier"
+  },
+  {
+   "depends_on": "eval:doc.send_to=='All Sales Partner Contact'",
+   "fieldname": "sales_partner",
+   "fieldtype": "Link",
+   "label": "Sales Partner",
+   "options": "Sales Partner"
   },
   {
    "depends_on": "eval:doc.send_to=='All Employee (Active)'",
@@ -103,7 +111,7 @@
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-19 19:00:22.023239",
+ "modified": "2024-03-27 13:10:43.007491",
  "modified_by": "Administrator",
  "module": "Selling",
  "name": "SMS Center",
@@ -118,7 +126,7 @@
   }
  ],
  "read_only": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
 }

@@ -1,32 +1,31 @@
 {
  "actions": [],
- "allow_rename": 1,
- "creation": "2024-10-25 13:56:52.854434",
+ "creation": "2020-08-03 16:52:14.731978",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "item"
+  "project_name"
  ],
  "fields": [
   {
-   "fieldname": "item",
+   "fieldname": "project_name",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Item",
-   "options": "Item"
+   "label": "Project",
+   "options": "Project"
   }
  ],
- "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-10-25 13:58:51.265957",
+ "modified": "2024-03-27 13:10:23.351144",
  "modified_by": "Administrator",
  "module": "Accounts",
- "name": "Item Qty Budget",
+ "name": "PSOA Project",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
+ "quick_entry": 1,
+ "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

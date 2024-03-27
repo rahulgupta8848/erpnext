@@ -59,13 +59,13 @@
   "addtional_info",
   "mode_of_payment",
   "payment_order",
-  "party_not_required",
   "column_break3",
   "is_opening",
   "stock_entry",
   "subscription_section",
   "auto_repeat",
-  "amended_from"
+  "amended_from",
+  "repost_required"
  ],
  "fields": [
   {
@@ -544,14 +544,15 @@
    "label": "Is System Generated",
    "no_copy": 1,
    "read_only": 1
-   },
+  },
   {
    "default": "0",
-   "fieldname": "party_not_required",
+   "fieldname": "repost_required",
    "fieldtype": "Check",
    "hidden": 1,
-   "label": "Party Not Required",
-   "no_copy": 1
+   "label": "Repost Required",
+   "print_hide": 1,
+   "read_only": 1
   }
  ],
  "icon": "fa fa-file-text",
@@ -566,7 +567,7 @@
    "table_fieldname": "payment_entries"
   }
  ],
- "modified": "2024-07-18 15:32:29.413598",
+ "modified": "2024-03-27 13:09:58.366953",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Journal Entry",
@@ -612,7 +613,7 @@
   }
  ],
  "search_fields": "voucher_type,posting_date, due_date, cheque_no",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "title",

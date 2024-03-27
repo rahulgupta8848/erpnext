@@ -54,6 +54,7 @@
   "hour_rate",
   "for_operation",
   "more_information",
+  "project",
   "item_name",
   "transferred_qty",
   "requested_qty",
@@ -85,6 +86,7 @@
    "search_index": 1
   },
   {
+   "fetch_from": "work_order.bom_no",
    "fieldname": "bom_no",
    "fieldtype": "Link",
    "label": "BOM No",
@@ -159,7 +161,6 @@
    "fieldname": "total_completed_qty",
    "fieldtype": "Float",
    "label": "Total Completed Qty",
-   "non_negative": 1,
    "read_only": 1
   },
   {
@@ -209,6 +210,12 @@
    "fieldtype": "Float",
    "label": "Requested Qty",
    "read_only": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
   },
   {
    "fieldname": "remarks",
@@ -274,7 +281,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "bom_no.item",
+   "fetch_from": "work_order.production_item",
    "fieldname": "production_item",
    "fieldtype": "Link",
    "label": "Production Item",
@@ -504,7 +511,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-03-17 15:55:11.143456",
+ "modified": "2024-03-27 13:09:56.634418",
  "modified_by": "Administrator",
  "module": "Manufacturing",
  "name": "Job Card",
@@ -557,7 +564,7 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "operation",

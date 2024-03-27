@@ -58,7 +58,6 @@
   "pricing_rules",
   "stock_uom_rate",
   "is_free_item",
-  "apply_tds",
   "section_break_29",
   "net_rate",
   "net_amount",
@@ -67,11 +66,10 @@
   "base_net_rate",
   "base_net_amount",
   "valuation_rate",
-  "sales_incoming_rate",
   "item_tax_amount",
   "rm_supp_cost",
   "landed_cost_voucher_amount",
-  "amount_difference_with_purchase_invoice",
+  "rate_difference_with_purchase_invoice",
   "billed_amt",
   "warehouse_and_reference",
   "warehouse",
@@ -82,7 +80,9 @@
   "purchase_invoice",
   "column_break_40",
   "allow_zero_valuation_rate",
-  "return_qty_from_rejected_warehouse",
+  "is_fixed_asset",
+  "asset_location",
+  "asset_category",
   "schedule_date",
   "quality_inspection",
   "material_request_item",
@@ -92,8 +92,6 @@
   "delivery_note_item",
   "putaway_rule",
   "section_break_45",
-  "has_batch_no",
-  "has_serial_no",
   "add_serial_batch_bundle",
   "serial_and_batch_bundle",
   "use_serial_batch_fields",
@@ -120,14 +118,13 @@
   "accounting_details_section",
   "expense_account",
   "item_tax_rate",
+  "wip_composite_asset",
   "column_break_102",
   "provisional_expense_account",
   "accounting_dimensions_section",
-  "work_breakdown_structure",
-  "cost_center",
+  "project",
   "dimension_col_break",
-  "project_name",
-  "wbs_name",
+  "cost_center",
   "section_break_80",
   "page_break",
   "sales_order",
@@ -535,6 +532,16 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "0",
+   "fieldname": "is_fixed_asset",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Fixed Asset",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "purchase_order",
    "fieldtype": "Link",
    "label": "Purchase Order",
@@ -570,7 +577,6 @@
    "width": "100px"
   },
   {
-   "depends_on": "eval: doc.has_batch_no === 1 || doc.has_serial_no === 1",
    "fieldname": "section_break_45",
    "fieldtype": "Section Break",
    "label": "Serial and Batch No"
@@ -580,6 +586,13 @@
    "fieldtype": "Link",
    "label": "Item Tax Template",
    "options": "Item Tax Template",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project",
    "print_hide": 1
   },
   {
@@ -761,8 +774,7 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Material Request Item",
-   "read_only": 1,
-   "search_index": 1
+   "read_only": 1
   },
   {
    "fieldname": "expense_account",
@@ -799,6 +811,22 @@
    "fieldname": "manufacturer_part_no",
    "fieldtype": "Data",
    "label": "Manufacturer Part Number"
+  },
+  {
+   "depends_on": "is_fixed_asset",
+   "fieldname": "asset_location",
+   "fieldtype": "Link",
+   "label": "Asset Location",
+   "options": "Location"
+  },
+  {
+   "depends_on": "is_fixed_asset",
+   "fetch_from": "item_code.asset_category",
+   "fieldname": "asset_category",
+   "fieldtype": "Link",
+   "label": "Asset Category",
+   "options": "Asset Category",
+   "read_only": 1
   },
   {
    "depends_on": "eval:parent.is_internal_supplier",
@@ -968,6 +996,14 @@
    "read_only": 1
   },
   {
+   "fieldname": "rate_difference_with_purchase_invoice",
+   "fieldtype": "Currency",
+   "label": "Rate Difference with Purchase Invoice",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
    "depends_on": "eval:doc.use_serial_batch_fields === 0 || doc.docstatus === 1",
    "fieldname": "serial_and_batch_bundle",
    "fieldtype": "Link",
@@ -984,19 +1020,16 @@
    "label": "Subcontract BOM"
   },
   {
-   "depends_on": "eval:doc.use_serial_batch_fields === 1 && doc.has_serial_no === 1",
    "fieldname": "serial_no",
    "fieldtype": "Text",
    "label": "Serial No"
   },
   {
-   "depends_on": "eval:doc.use_serial_batch_fields === 1 && doc.has_serial_no === 1",
    "fieldname": "rejected_serial_no",
    "fieldtype": "Text",
    "label": "Rejected Serial No"
   },
   {
-   "depends_on": "eval:doc.use_serial_batch_fields === 1 && doc.has_batch_no === 1",
    "fieldname": "batch_no",
    "fieldtype": "Link",
    "label": "Batch No",
@@ -1009,8 +1042,7 @@
    "fieldtype": "Link",
    "label": "Rejected Serial and Batch Bundle",
    "no_copy": 1,
-   "options": "Serial and Batch Bundle",
-   "search_index": 1
+   "options": "Serial and Batch Bundle"
   },
   {
    "depends_on": "eval:doc.use_serial_batch_fields === 0",
@@ -1032,6 +1064,12 @@
    "fieldname": "add_serial_batch_bundle",
    "fieldtype": "Button",
    "label": "Add Serial / Batch No"
+  },
+  {
+   "fieldname": "wip_composite_asset",
+   "fieldtype": "Link",
+   "label": "WIP Composite Asset",
+   "options": "Asset"
   },
   {
    "fieldname": "sales_order",
@@ -1069,79 +1107,12 @@
    "fieldname": "use_serial_batch_fields",
    "fieldtype": "Check",
    "label": "Use Serial No / Batch Fields"
-  },
-  {
-   "default": "1",
-   "fieldname": "apply_tds",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Apply TDS",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "return_qty_from_rejected_warehouse",
-   "fieldtype": "Check",
-   "label": "Return Qty from Rejected Warehouse",
-   "read_only": 1
-  },
-  {
-   "description": "Valuation rate for the item as per Sales Invoice (Only for Internal Transfers)",
-   "fieldname": "sales_incoming_rate",
-   "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Sales Incoming Rate",
-   "no_copy": 1,
-   "options": "Company:company:default_currency",
-   "print_hide": 1
-    },
-    {
-     "fieldname": "amount_difference_with_purchase_invoice",
-     "fieldtype": "Currency",
-     "label": "Amount Difference with Purchase Invoice",
-     "no_copy": 1,
-     "print_hide": 1,
-     "read_only": 1
-  },
-  {
-   "fieldname": "work_breakdown_structure",
-   "fieldtype": "Link",
-   "label": "Work Breakdown Structure",
-   "options": "Work Breakdown Structure"
-  },
-  {
-   "fieldname": "project_name",
-   "fieldtype": "Data",
-   "label": "Project Name",
-   "read_only": 1
-  },
-  {
-   "fieldname": "wbs_name",
-   "fieldtype": "Data",
-   "label": "WBS Name",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "fetch_from": "item_code.has_serial_no",
-   "fieldname": "has_serial_no",
-   "fieldtype": "Check",
-   "label": "Has Serial No",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "fetch_from": "item_code.has_batch_no",
-   "fieldname": "has_batch_no",
-   "fieldtype": "Check",
-   "label": " Has Batch No",
-   "read_only": 1
   }
  ],
  "idx": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-11-19 19:41:44.060832",
+ "modified": "2024-03-27 13:10:25.896543",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Purchase Receipt Item",
@@ -1149,7 +1120,7 @@
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
 }

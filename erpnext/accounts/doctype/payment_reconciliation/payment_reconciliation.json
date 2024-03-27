@@ -7,7 +7,6 @@
  "field_order": [
   "company",
   "party_type",
-  "clearing_date",
   "column_break_4",
   "party",
   "receivable_payable_account",
@@ -29,7 +28,6 @@
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
-  "project",
   "sec_break1",
   "invoice_name",
   "invoices",
@@ -43,6 +41,7 @@
   {
    "fieldname": "company",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Company",
    "options": "Company",
    "reqd": 1
@@ -54,13 +53,6 @@
    "options": "DocType",
    "reqd": 1
   },
-  {
-    "default": "Today",
-    "fieldname": "clearing_date",
-    "fieldtype": "Date",
-    "label": "Clearing Date",
-    "no_copy": 1
-   },
   {
    "depends_on": "eval:doc.party_type",
    "fieldname": "party",
@@ -203,15 +195,7 @@
    "options": "Cost Center"
   },
   {
-    "fieldname": "project",
-    "fieldtype": "Link",
-    "label": "Project",
-    "options": "Project"
-  },
-  {
    "depends_on": "eval:doc.party",
-   "description": "Only 'Payment Entries' made against this advance account are supported.",
-   "documentation_url": "https://docs.erpnext.com/docs/user/manual/en/advance-in-separate-party-account",
    "fieldname": "default_advance_account",
    "fieldtype": "Link",
    "label": "Default Advance Account",
@@ -246,7 +230,7 @@
  "is_virtual": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-04-23 12:38:29.557315",
+ "modified": "2024-03-27 13:10:10.488007",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Reconciliation",
@@ -269,7 +253,7 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
 }

@@ -1,5 +1,7 @@
 {
  "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:UNREC-{#####}",
  "creation": "2023-08-22 10:26:34.421423",
  "default_view": "List",
  "doctype": "DocType",
@@ -56,7 +58,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-10-10 12:03:50.022444",
+ "modified": "2024-03-27 13:10:57.073165",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Unreconcile Payment",
@@ -84,7 +86,7 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

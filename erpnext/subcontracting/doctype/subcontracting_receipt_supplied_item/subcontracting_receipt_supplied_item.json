@@ -25,7 +25,6 @@
   "consumed_qty",
   "current_stock",
   "secbreak_3",
-  "add_serial_batch_bundle",
   "serial_and_batch_bundle",
   "use_serial_batch_fields",
   "col_break4",
@@ -33,11 +32,7 @@
   "section_break_zwnh",
   "serial_no",
   "column_break_qibi",
-  "batch_no",
-  "accounting_details_section",
-  "expense_account",
-  "accounting_dimensions_section",
-  "cost_center"
+  "batch_no"
  ],
  "fields": [
   {
@@ -107,7 +102,7 @@
   {
    "fieldname": "stock_uom",
    "fieldtype": "Link",
-   "label": "Stock UOM",
+   "label": "Stock Uom",
    "options": "UOM",
    "read_only": 1
   },
@@ -229,49 +224,19 @@
   {
    "fieldname": "column_break_qibi",
    "fieldtype": "Column Break"
-  },
-  {
-   "depends_on": "eval:doc.use_serial_batch_fields === 0",
-   "fieldname": "add_serial_batch_bundle",
-   "fieldtype": "Button",
-   "label": "Add Serial / Batch Bundle"
-  },
-  {
-   "fieldname": "accounting_details_section",
-   "fieldtype": "Section Break",
-   "label": "Accounting Details"
-  },
-  {
-   "fieldname": "expense_account",
-   "fieldtype": "Link",
-   "label": "Expense Account",
-   "options": "Account"
-  },
-  {
-   "fieldname": "accounting_dimensions_section",
-   "fieldtype": "Section Break",
-   "label": "Accounting Dimensions"
-  },
-  {
-   "depends_on": "eval:cint(erpnext.is_perpetual_inventory_enabled(parent.company))",
-   "fieldname": "cost_center",
-   "fieldtype": "Link",
-   "label": "Cost Center",
-   "options": "Cost Center",
-   "print_hide": 1
   }
  ],
  "idx": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-03-30 10:26:27.237371",
+ "modified": "2024-03-27 13:10:47.405161",
  "modified_by": "Administrator",
  "module": "Subcontracting",
  "name": "Subcontracting Receipt Supplied Item",
  "naming_rule": "Autoincrement",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1
