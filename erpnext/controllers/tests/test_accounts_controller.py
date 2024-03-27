@@ -5,16 +5,15 @@
 import frappe
 from frappe import qb
 from frappe.query_builder.functions import Sum
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate, nowdate
-from frappe.utils.data import getdate as convert_to_date
+
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import create_payment_entry
-from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 from erpnext.accounts.party import get_party_account
-from erpnext.buying.doctype.purchase_order.test_purchase_order import prepare_data_for_internal_transfer
 from erpnext.stock.doctype.item.test_item import create_item
+
 
 def make_customer(customer_name, currency=None):
 	if not frappe.db.exists("Customer", customer_name):
@@ -114,102 +113,26 @@ class TestAccountsController(FrappeTestCase):
 		self.supplier = make_supplier("_Test MC Supplier USD", "USD")
 
 	def create_account(self):
-		accounts = [
-			frappe._dict(
-				{
-					"attribute_name": "debtors_usd",
-					"name": "Debtors USD",
-					"account_type": "Receivable",
-					"account_currency": "USD",
-					"parent_account": "Accounts Receivable - " + self.company_abbr,
-				}
-			),
-			frappe._dict(
-				{
-					"attribute_name": "creditors_usd",
-					"name": "Creditors USD",
-					"account_type": "Payable",
-					"account_currency": "USD",
-					"parent_account": "Accounts Payable - " + self.company_abbr,
-				}
-			),
-			# Advance accounts under Asset and Liability header
-			frappe._dict(
-				{
-					"attribute_name": "advance_received_usd",
-					"name": "Advance Received USD",
-					"account_type": "Receivable",
-					"account_currency": "USD",
-					"parent_account": "Current Liabilities - " + self.company_abbr,
-				}
-			),
-			frappe._dict(
-				{
-					"attribute_name": "advance_paid_usd",
-					"name": "Advance Paid USD",
-					"account_type": "Payable",
-					"account_currency": "USD",
-					"parent_account": "Current Assets - " + self.company_abbr,
-				}
-			),
-		]
-
-		for x in accounts:
-			if not frappe.db.get_value("Account", filters={"account_name": x.name, "company": self.company}):
-				acc = frappe.new_doc("Account")
-				acc.account_name = x.name
-				acc.parent_account = x.parent_account
-				acc.company = self.company
-				acc.account_currency = x.account_currency
-				acc.account_type = x.account_type
-				acc.insert(ignore_permissions=True)
-			else:
-				name = frappe.db.get_value(
-					"Account",
-					filters={"account_name": x.name, "company": self.company},
-					fieldname="name",
-					pluck=True,
-				)
-				acc = frappe.get_doc("Account", name)
-			setattr(self, x.attribute_name, acc.name)
-
-	def setup_advance_accounts_in_party_master(self):
-		company = frappe.get_doc("Company", self.company)
-		company.book_advance_payments_in_separate_party_account = 1
-		company.save()
-
-		customer = frappe.get_doc("Customer", self.customer)
-		customer.append(
-			"accounts",
-			{
-				"company": self.company,
-				"account": self.debtors_usd,
-				"advance_account": self.advance_received_usd,
-			},
-		)
-		customer.save()
-
-		supplier = frappe.get_doc("Supplier", self.supplier)
-		supplier.append(
-			"accounts",
-			{
-				"company": self.company,
-				"account": self.creditors_usd,
-				"advance_account": self.advance_paid_usd,
-			},
-		)
-		supplier.save()
-
-	def remove_advance_accounts_from_party_master(self):
-		company = frappe.get_doc("Company", self.company)
-		company.book_advance_payments_in_separate_party_account = 0
-		company.save()
-		customer = frappe.get_doc("Customer", self.customer)
-		customer.accounts = []
-		customer.save()
-		supplier = frappe.get_doc("Supplier", self.supplier)
-		supplier.accounts = []
-		supplier.save()
+		account_name = "Debtors USD"
+		if not frappe.db.get_value(
+			"Account", filters={"account_name": account_name, "company": self.company}
+		):
+			acc = frappe.new_doc("Account")
+			acc.account_name = account_name
+			acc.parent_account = "Accounts Receivable - " + self.company_abbr
+			acc.company = self.company
+			acc.account_currency = "USD"
+			acc.account_type = "Receivable"
+			acc.insert()
+		else:
+			name = frappe.db.get_value(
+				"Account",
+				filters={"account_name": account_name, "company": self.company},
+				fieldname="name",
+				pluck=True,
+			)
+			acc = frappe.get_doc("Account", name)
+		self.debtors_usd = acc.name
 
 	def create_sales_invoice(
 		self,
@@ -250,9 +173,7 @@ class TestAccountsController(FrappeTestCase):
 		)
 		return sinv
 
-	def create_payment_entry(
-		self, amount=1, source_exc_rate=75, posting_date=None, customer=None, submit=True
-	):
+	def create_payment_entry(self, amount=1, source_exc_rate=75, posting_date=None, customer=None):
 		"""
 		Helper function to populate default values in payment entry
 		"""
@@ -272,48 +193,6 @@ class TestAccountsController(FrappeTestCase):
 		payment.received_amount = source_exc_rate * amount
 		payment.posting_date = posting_date
 		return payment
-
-	def create_purchase_invoice(
-		self,
-		qty=1,
-		rate=1,
-		conversion_rate=80,
-		posting_date=None,
-		do_not_save=False,
-		do_not_submit=False,
-	):
-		"""
-		Helper function to populate default values in purchase invoice
-		"""
-		if posting_date is None:
-			posting_date = nowdate()
-
-		pinv = make_purchase_invoice(
-			posting_date=posting_date,
-			qty=qty,
-			rate=rate,
-			company=self.company,
-			supplier=self.supplier,
-			item_code=self.item,
-			item_name=self.item,
-			cost_center=self.cost_center,
-			warehouse=self.warehouse,
-			parent_cost_center=self.cost_center,
-			update_stock=0,
-			currency="USD",
-			conversion_rate=conversion_rate,
-			is_pos=0,
-			is_return=0,
-			income_account=self.income_account,
-			expense_account=self.expense_account,
-			do_not_save=True,
-		)
-		pinv.credit_to = self.creditors_usd
-		if not do_not_save:
-			pinv.save()
-			if not do_not_submit:
-				pinv.submit()
-		return pinv
 
 	def clear_old_entries(self):
 		doctype_list = [
@@ -801,172 +680,6 @@ class TestAccountsController(FrappeTestCase):
 		exc_je_for_pe = self.get_journals_for(pe.doctype, pe.name)
 		self.assertEqual(exc_je_for_si, [])
 		self.assertEqual(exc_je_for_pe, [])
-
-	@change_settings("Stock Settings", {"allow_internal_transfer_at_arms_length_price": 1})
-	def test_16_internal_transfer_at_arms_length_price(self):
-		from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_inter_company_purchase_invoice
-		from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
-
-		prepare_data_for_internal_transfer()
-		company = "_Test Company with perpetual inventory"
-		target_warehouse = create_warehouse("_Test Internal Warehouse New 1", company=company)
-		warehouse = create_warehouse("_Test Internal Warehouse New 2", company=company)
-		arms_length_price = 40
-
-		si = create_sales_invoice(
-			company=company,
-			customer="_Test Internal Customer 2",
-			debit_to="Debtors - TCP1",
-			target_warehouse=target_warehouse,
-			warehouse=warehouse,
-			income_account="Sales - TCP1",
-			expense_account="Cost of Goods Sold - TCP1",
-			cost_center="Main - TCP1",
-			update_stock=True,
-			do_not_save=True,
-			do_not_submit=True,
-		)
-
-		si.items[0].rate = arms_length_price
-		si.save()
-		# rate should not reset to incoming rate
-		self.assertEqual(si.items[0].rate, arms_length_price)
-
-		frappe.db.set_single_value("Stock Settings", "allow_internal_transfer_at_arms_length_price", 0)
-		si.items[0].rate = arms_length_price
-		si.save()
-		# rate should reset to incoming rate
-		self.assertEqual(si.items[0].rate, 100)
-
-		si.update_stock = 0
-		si.save()
-		si.submit()
-		pi = make_inter_company_purchase_invoice(si.name)
-		pi.update_stock = 1
-		pi.items[0].rate = arms_length_price
-		pi.items[0].warehouse = target_warehouse
-		pi.items[0].from_warehouse = warehouse
-		pi.save()
-		self.assertEqual(pi.items[0].rate, 100)
-		self.assertEqual(pi.items[0].valuation_rate, 100)
-		frappe.db.set_single_value("Stock Settings", "allow_internal_transfer_at_arms_length_price", 1)
-		pi = make_inter_company_purchase_invoice(si.name)
-		pi.update_stock = 1
-		pi.items[0].rate = arms_length_price
-		pi.items[0].warehouse = target_warehouse
-		pi.items[0].from_warehouse = warehouse
-		pi.save()
-		self.assertEqual(pi.items[0].rate, arms_length_price)
-		self.assertEqual(pi.items[0].valuation_rate, 100)
-
-	@change_settings("Accounts Settings", {"exchange_gain_loss_posting_date": "Reconciliation Date"})
-	def test_17_gain_loss_posting_date_for_normal_payment(self):
-		# Sales Invoice in Foreign Currency
-		rate = 80
-		rate_in_account_currency = 1
-		adv_date = convert_to_date(add_days(nowdate(), -2))
-		inv_date = convert_to_date(add_days(nowdate(), -1))
-		si = self.create_sales_invoice(posting_date=inv_date, qty=1, rate=rate_in_account_currency)
-		# Test payments with different exchange rates
-		pe = self.create_payment_entry(posting_date=adv_date, amount=1, source_exc_rate=75.1).save().submit()
-		pr = self.create_payment_reconciliation()
-		pr.from_invoice_date = add_days(nowdate(), -1)
-		pr.to_invoice_date = nowdate()
-		pr.from_payment_date = add_days(nowdate(), -2)
-		pr.to_payment_date = nowdate()
-		pr.get_unreconciled_entries()
-		self.assertEqual(len(pr.invoices), 1)
-		self.assertEqual(len(pr.payments), 1)
-		invoices = [x.as_dict() for x in pr.invoices]
-		payments = [x.as_dict() for x in pr.payments]
-		pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
-		pr.reconcile()
-		self.assertEqual(len(pr.invoices), 0)
-		self.assertEqual(len(pr.payments), 0)
-		# Outstanding in both currencies should be '0'
-		si.reload()
-		self.assertEqual(si.outstanding_amount, 0)
-		self.assert_ledger_outstanding(si.doctype, si.name, 0.0, 0.0)
-		# Exchange Gain/Loss Journal should've been created.
-		exc_je_for_si = self.get_journals_for(si.doctype, si.name)
-		exc_je_for_pe = self.get_journals_for(pe.doctype, pe.name)
-		self.assertNotEqual(exc_je_for_si, [])
-		self.assertEqual(len(exc_je_for_si), 1)
-		self.assertEqual(len(exc_je_for_pe), 1)
-		self.assertEqual(exc_je_for_si[0], exc_je_for_pe[0])
-		self.assertEqual(
-			getdate(nowdate()), frappe.db.get_value("Journal Entry", exc_je_for_pe[0].parent, "posting_date")
-		)
-		# Cancel Payment
-		pe.reload()
-		pe.cancel()
-		# outstanding should be same as grand total
-		si.reload()
-		self.assertEqual(si.outstanding_amount, rate_in_account_currency)
-		self.assert_ledger_outstanding(si.doctype, si.name, rate, rate_in_account_currency)
-		# Exchange Gain/Loss Journal should've been cancelled
-		exc_je_for_si = self.get_journals_for(si.doctype, si.name)
-		exc_je_for_pe = self.get_journals_for(pe.doctype, pe.name)
-		self.assertEqual(exc_je_for_si, [])
-		self.assertEqual(exc_je_for_pe, [])
-
-
-	@change_settings(
-		"Accounts Settings",
-		{"add_taxes_from_item_tax_template": 0, "add_taxes_from_taxes_and_charges_template": 1},
-	)
-
-	def test_18_fetch_taxes_based_on_taxes_and_charges_template(self):
-		# Create a Sales Taxes and Charges Template
-		if not frappe.db.exists("Sales Taxes and Charges Template", "_Test Tax - _TC"):
-			doc = frappe.new_doc("Sales Taxes and Charges Template")
-			doc.company = self.company
-			doc.title = "_Test Tax"
-			doc.append(
-				"taxes",
-				{
-					"charge_type": "On Net Total",
-					"account_head": "Sales Expenses - _TC",
-					"description": "Test taxes",
-					"rate": 9,
-				},
-			)
-			doc.insert()
-
-		# Create a Sales Invoice
-		sinv = frappe.new_doc("Sales Invoice")
-		sinv.customer = self.customer
-		sinv.company = self.company
-		sinv.currency = "INR"
-		sinv.taxes_and_charges = "_Test Tax - _TC"
-		sinv.append("items", {"item_code": "_Test Item", "qty": 1, "rate": 50})
-		sinv.insert()
-
-		self.assertEqual(sinv.total_taxes_and_charges, 4.5)
-	
-	@change_settings(
-		"Accounts Settings",
-		{"add_taxes_from_item_tax_template": 1, "add_taxes_from_taxes_and_charges_template": 0},
-	)
-	def test_19_fetch_taxes_based_on_item_tax_template_template(self):
-		# Create a Sales Invoice
-		sinv = frappe.new_doc("Sales Invoice")
-		sinv.customer = self.customer
-		sinv.company = self.company
-		sinv.currency = "INR"
-		sinv.append(
-			"items",
-			{
-				"item_code": "_Test Item",
-				"qty": 1,
-				"rate": 50,
-				"item_tax_template": "_Test Account Excise Duty @ 10 - _TC",
-			},
-		)
-		sinv.insert()
-
-		self.assertEqual(sinv.taxes[0].account_head, "_Test Account Excise Duty - _TC")
-		self.assertEqual(sinv.total_taxes_and_charges, 5)
 
 	def test_20_journal_against_sales_invoice(self):
 		# Invoice in Foreign Currency
@@ -1570,32 +1283,32 @@ class TestAccountsController(FrappeTestCase):
 
 		# Invoices
 		si1 = self.create_sales_invoice(qty=1, rate=rate_in_account_currency, do_not_submit=True)
-		si1.department = "Management - _TC"
+		si1.department = "Management"
 		si1.save().submit()
 
 		si2 = self.create_sales_invoice(qty=1, rate=rate_in_account_currency, do_not_submit=True)
-		si2.department = "Operations - _TC"
+		si2.department = "Operations"
 		si2.save().submit()
 
 		# Payments
 		cr_note1 = self.create_sales_invoice(qty=-1, conversion_rate=75, rate=1, do_not_save=True)
-		cr_note1.department = "Management - _TC"
+		cr_note1.department = "Management"
 		cr_note1.is_return = 1
 		cr_note1.save().submit()
 
 		cr_note2 = self.create_sales_invoice(qty=-1, conversion_rate=75, rate=1, do_not_save=True)
-		cr_note2.department = "Legal - _TC"
+		cr_note2.department = "Legal"
 		cr_note2.is_return = 1
 		cr_note2.save().submit()
 
 		pe1 = get_payment_entry(si1.doctype, si1.name)
 		pe1.references = []
-		pe1.department = "Research & Development - _TC"
+		pe1.department = "Research & Development"
 		pe1.save().submit()
 
 		pe2 = get_payment_entry(si1.doctype, si1.name)
 		pe2.references = []
-		pe2.department = "Management - _TC"
+		pe2.department = "Management"
 		pe2.save().submit()
 
 		je1 = self.create_journal_entry(
@@ -1608,7 +1321,7 @@ class TestAccountsController(FrappeTestCase):
 		)
 		je1.accounts[0].party_type = "Customer"
 		je1.accounts[0].party = self.customer
-		je1.accounts[0].department = "Management - _TC"
+		je1.accounts[0].department = "Management"
 		je1.save().submit()
 
 		# assert dimension filter's result
@@ -1617,17 +1330,17 @@ class TestAccountsController(FrappeTestCase):
 		self.assertEqual(len(pr.invoices), 2)
 		self.assertEqual(len(pr.payments), 5)
 
-		pr.department = "Legal - _TC"
+		pr.department = "Legal"
 		pr.get_unreconciled_entries()
 		self.assertEqual(len(pr.invoices), 0)
 		self.assertEqual(len(pr.payments), 1)
 
-		pr.department = "Management - _TC"
+		pr.department = "Management"
 		pr.get_unreconciled_entries()
 		self.assertEqual(len(pr.invoices), 1)
 		self.assertEqual(len(pr.payments), 3)
 
-		pr.department = "Research & Development - _TC"
+		pr.department = "Research & Development"
 		pr.get_unreconciled_entries()
 		self.assertEqual(len(pr.invoices), 0)
 		self.assertEqual(len(pr.payments), 1)
@@ -1638,17 +1351,17 @@ class TestAccountsController(FrappeTestCase):
 
 		# Invoice
 		si = self.create_sales_invoice(qty=1, rate=rate_in_account_currency, do_not_submit=True)
-		si.department = "Management - _TC"
+		si.department = "Management"
 		si.save().submit()
 
 		# Payment
 		cr_note = self.create_sales_invoice(qty=-1, conversion_rate=75, rate=1, do_not_save=True)
-		cr_note.department = "Management - _TC"
+		cr_note.department = "Management"
 		cr_note.is_return = 1
 		cr_note.save().submit()
 
 		pr = self.create_payment_reconciliation()
-		pr.department = "Management - _TC"
+		pr.department = "Management"
 		pr.get_unreconciled_entries()
 		self.assertEqual(len(pr.invoices), 1)
 		self.assertEqual(len(pr.payments), 1)
@@ -1680,7 +1393,7 @@ class TestAccountsController(FrappeTestCase):
 		# Sales Invoice in Foreign Currency
 		self.setup_dimensions()
 		rate_in_account_currency = 1
-		dpt = "Research & Development - _TC"
+		dpt = "Research & Development"
 
 		si = self.create_sales_invoice(qty=1, rate=rate_in_account_currency, do_not_save=True)
 		si.department = dpt
@@ -1715,7 +1428,7 @@ class TestAccountsController(FrappeTestCase):
 
 	def test_93_dimension_inheritance_on_advance(self):
 		self.setup_dimensions()
-		dpt = "Research & Development - _TC"
+		dpt = "Research & Development"
 
 		adv = self.create_payment_entry(amount=1, source_exc_rate=85)
 		adv.department = dpt

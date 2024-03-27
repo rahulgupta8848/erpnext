@@ -1,8 +1,6 @@
 # Copyright (c) 2023, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import json
-
 import frappe
 from frappe import _, qb
 from frappe.model.document import Document
@@ -16,14 +14,13 @@ class ProcessPaymentReconciliation(Document):
 
 	from typing import TYPE_CHECKING
 
-	if TYPE_CHECKING:  # pragma: no cover
+	if TYPE_CHECKING:
 		from frappe.types import DF
 
 		amended_from: DF.Link | None
 		bank_cash_account: DF.Link | None
 		company: DF.Link
 		cost_center: DF.Link | None
-		default_advance_account: DF.Link
 		error_log: DF.LongText | None
 		from_invoice_date: DF.Date | None
 		from_payment_date: DF.Date | None
@@ -102,7 +99,6 @@ def get_pr_instance(doc: str):
 		"party_type",
 		"party",
 		"receivable_payable_account",
-		"default_advance_account",
 		"from_invoice_date",
 		"to_invoice_date",
 		"from_payment_date",
@@ -212,7 +208,7 @@ def trigger_reconciliation_for_queued_docs():
 		unique_filters = set()
 		queue_size = 5
 
-		fields = ["company", "party_type", "party", "receivable_payable_account", "default_advance_account"]
+		fields = ["company", "party_type", "party", "receivable_payable_account"]
 
 		def get_filters_as_tuple(fields, doc):
 			filters = ()
@@ -476,9 +472,7 @@ def reconcile(doc: None | str = None) -> None:
 						frappe.db.set_value("Process Payment Reconciliation Log", log, "reconciled", True)
 						frappe.db.set_value("Process Payment Reconciliation", doc, "status", "Completed")
 					else:
-						if not (
-							frappe.db.get_value("Process Payment Reconciliation", doc, "status") == "Paused"
-						):
+						if frappe.db.get_value("Process Payment Reconciliation", doc, "status") != "Paused":
 							# trigger next batch in job
 							# generate reconcile job name
 							allocation = get_next_allocation(log)
@@ -508,7 +502,7 @@ def is_any_doc_running(for_filter: str | dict | None = None) -> str | None:
 	running_doc = None
 	if for_filter:
 		if isinstance(for_filter, str):
-			for_filter = json.loads(for_filter)
+			for_filter = frappe.json.loads(for_filter)
 
 		running_doc = frappe.db.get_value(
 			"Process Payment Reconciliation",
