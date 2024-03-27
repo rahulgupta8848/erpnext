@@ -35,7 +35,7 @@ def get_webform_list_context(module):
 
 
 def get_webform_transaction_list(
-	doctype, txt=None, filters=None, limit_start=0, limit_page_length=20, order_by="modified"
+	doctype, txt=None, filters=None, limit_start=0, limit_page_length=20, order_by="creation"
 ):
 	"""Get List of transactions for custom doctypes"""
 	from frappe.www.list import get_list
@@ -59,7 +59,7 @@ def get_webform_transaction_list(
 		limit_page_length,
 		ignore_permissions=False,
 		fields=None,
-		order_by="modified",
+		order_by="creation",
 	)
 
 
@@ -69,7 +69,7 @@ def get_transaction_list(
 	filters=None,
 	limit_start=0,
 	limit_page_length=20,
-	order_by="creation desc",
+	order_by="creation",
 	custom=False,
 ):
 	user = frappe.session.user
@@ -78,10 +78,12 @@ def get_transaction_list(
 	if not filters:
 		filters = {}
 
-	filters["docstatus"] = ["<", 2] if doctype in ["Supplier Quotation", "Purchase Invoice"] else 1
+	filters["docstatus"] = ["<", "2"] if doctype in ["Supplier Quotation", "Purchase Invoice"] else 1
 
 	if (user != "Guest" and is_website_user()) or doctype == "Request for Quotation":
-		parties_doctype = "Request for Quotation Supplier" if doctype == "Request for Quotation" else doctype
+		parties_doctype = (
+			"Request for Quotation Supplier" if doctype == "Request for Quotation" else doctype
+		)
 		# find party for this contact
 		customers, suppliers = get_customers_suppliers(parties_doctype, user)
 
@@ -115,7 +117,7 @@ def get_transaction_list(
 		limit_page_length,
 		fields="name",
 		ignore_permissions=ignore_permissions,
-		order_by=order_by,
+		order_by="creation desc",
 	)
 
 	if custom:
@@ -149,7 +151,7 @@ def get_list_for_transactions(
 		limit_start=limit_start,
 		limit_page_length=limit_page_length,
 		ignore_permissions=ignore_permissions,
-		order_by="modified desc",
+		order_by="creation desc",
 	):
 		data.append(d)
 
@@ -178,24 +180,13 @@ def get_list_for_transactions(
 
 
 def rfq_transaction_list(parties_doctype, doctype, parties, limit_start, limit_page_length):
-	if frappe.db.db_type == 'postgres':
-		data = frappe.db.sql(
-			"""SELECT DISTINCT parent AS name, supplier, modified
-			FROM "tab{doctype}"
-			WHERE supplier = %s AND docstatus = 1
-			ORDER BY modified DESC
-			LIMIT %s OFFSET %s""".format(doctype=parties_doctype),
-			values=(parties[0], limit_page_length, limit_start),
-			as_dict=1,
-		)
-	else:
-		data = frappe.db.sql(
-			"""select distinct parent as name, supplier from `tab{doctype}`
-				where supplier = '{supplier}' and docstatus=1  order by modified desc limit {start}, {len}""".format(
-				doctype=parties_doctype, supplier=parties[0], start=limit_start, len=limit_page_length
-			),
-			as_dict=1,
-		)
+	data = frappe.db.sql(
+		"""select distinct parent as name, supplier from `tab{doctype}`
+			where supplier = '{supplier}' and docstatus=1  order by creation desc limit {start}, {len}""".format(
+			doctype=parties_doctype, supplier=parties[0], start=limit_start, len=limit_page_length
+		),
+		as_dict=1,
+	)
 
 	return post_process(doctype, data)
 
@@ -312,4 +303,6 @@ def add_role_for_portal_user(portal_user, role):
 		return
 
 	user_doc.add_roles(role)
-	frappe.msgprint(_("Added {1} Role to User {0}.").format(frappe.bold(user_doc.name), role), alert=True)
+	frappe.msgprint(
+		_("Added {1} Role to User {0}.").format(frappe.bold(user_doc.name), role), alert=True
+	)

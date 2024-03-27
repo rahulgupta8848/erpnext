@@ -64,7 +64,7 @@ class RepostItemValuation(Document):
 		frappe.db.delete(
 			table,
 			filters=(
-				(table.modified < (Now() - Interval(days=days)))
+				(table.creation < (Now() - Interval(days=days)))
 				& (table.status.isin(["Completed", "Skipped"]))
 			),
 		)
