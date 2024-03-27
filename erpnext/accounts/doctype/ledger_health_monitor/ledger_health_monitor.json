@@ -9,9 +9,7 @@
   "monitor_section",
   "monitor_for_last_x_days",
   "debit_credit_mismatch",
-  "general_and_payment_ledger_mismatch",
-  "section_break_xdsp",
-  "companies"
+  "general_and_payment_ledger_mismatch"
  ],
  "fields": [
   {
@@ -23,7 +21,7 @@
   {
    "fieldname": "monitor_section",
    "fieldtype": "Section Break",
-   "label": "Configuration"
+   "label": "Monitor"
   },
   {
    "default": "0",
@@ -44,23 +42,12 @@
    "in_list_view": 1,
    "label": "Monitor for Last 'X' days",
    "reqd": 1
-  },
-  {
-   "fieldname": "section_break_xdsp",
-   "fieldtype": "Section Break",
-   "label": "Companies"
-  },
-  {
-   "fieldname": "companies",
-   "fieldtype": "Table",
-   "options": "Ledger Health Monitor Company"
   }
  ],
- "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-03-27 10:14:16.511681",
+ "modified": "2024-03-27 09:53:00.674708",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Ledger Health Monitor",
@@ -75,30 +62,9 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "role": "Accounts Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "role": "Accounts User",
-   "share": 1,
-   "write": 1
   }
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }
