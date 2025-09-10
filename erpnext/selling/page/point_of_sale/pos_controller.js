@@ -151,8 +151,7 @@ erpnext.PointOfSale.Controller = class {
 		});
 
 		frappe.realtime.on(`poe_${this.pos_opening}_closed`, (data) => {
-			const route = frappe.get_route_str();
-			if (data && route == "point-of-sale") {
+			if (data) {
 				frappe.dom.freeze();
 				frappe.msgprint({
 					title: __("POS Closed"),
