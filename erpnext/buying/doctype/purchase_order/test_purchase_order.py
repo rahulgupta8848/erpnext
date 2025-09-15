@@ -54,11 +54,14 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
 	make_purchase_invoice as make_pi_from_pr,
 )
 from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
+from erpnext.stock.utils import get_or_create_fiscal_year
 
 
 class TestPurchaseOrder(FrappeTestCase):
 	def test_purchase_order_qty(self):
 		po = create_purchase_order(qty=1, do_not_save=True)
+
+		# NonNegativeError with qty=-1
 		po.append(
 			"items",
 			{
@@ -69,8 +72,14 @@ class TestPurchaseOrder(FrappeTestCase):
 		)
 		self.assertRaises(frappe.NonNegativeError, po.save)
 
+		# InvalidQtyError with qty=0
 		po.items[1].qty = 0
 		self.assertRaises(InvalidQtyError, po.save)
+
+		# No error with qty=1
+		po.items[1].qty = 1
+		po.save()
+		self.assertEqual(po.items[1].qty, 1)
 
 	def test_make_purchase_receipt(self):
 		po = create_purchase_order(do_not_submit=True)
@@ -1217,6 +1226,80 @@ class TestPurchaseOrder(FrappeTestCase):
 		# Check if the billed amount stayed the same
 		po.reload()
 		self.assertEqual(po.per_billed, 100)
+
+	@change_settings("Buying Settings", {"allow_zero_qty_in_purchase_order": 1})
+	def test_receive_zero_qty_purchase_order(self):
+		"""
+		Test the flow of a Unit Price PO and PR creation against it until completion.
+		Flow:
+		PO Qty 0 -> Receive +5 -> Receive +5 -> Update PO Qty +10 -> PO is 100% received
+		"""
+		po = create_purchase_order(qty=0)
+		pr = make_purchase_receipt(po.name)
+
+		self.assertEqual(pr.items[0].qty, 0)
+		pr.items[0].qty = 5
+		pr.submit()
+
+		po.reload()
+		self.assertEqual(po.items[0].received_qty, 5)
+		self.assertFalse(po.per_received)
+		self.assertEqual(po.status, "To Receive and Bill")
+
+		# Update PO Item Qty to 10 after receipt of items
+		first_item_of_po = po.items[0]
+		trans_item = json.dumps(
+			[
+				{
+					"item_code": first_item_of_po.item_code,
+					"rate": first_item_of_po.rate,
+					"qty": 10,
+					"docname": first_item_of_po.name,
+				}
+			]
+		)
+		update_child_qty_rate("Purchase Order", trans_item, po.name)
+
+		# Test: PR can be made against PO as long PO qty is 0 OR PO qty > received qty
+		pr2 = make_purchase_receipt(po.name)
+
+		po.reload()
+		self.assertEqual(po.items[0].qty, 10)
+		self.assertEqual(pr2.items[0].qty, 5)
+
+		pr2.submit()
+
+		# PO should be updated to 100% received
+		po.reload()
+		self.assertEqual(po.items[0].qty, 10)
+		self.assertEqual(po.items[0].received_qty, 10)
+		self.assertEqual(po.per_received, 100.0)
+		self.assertEqual(po.status, "To Bill")
+
+	@change_settings("Buying Settings", {"allow_zero_qty_in_purchase_order": 1})
+	def test_bill_zero_qty_purchase_order(self):
+		po = create_purchase_order(qty=0)
+
+		self.assertEqual(po.grand_total, 0)
+		self.assertFalse(po.per_billed)
+		self.assertEqual(po.items[0].qty, 0)
+		self.assertEqual(po.items[0].rate, 500)
+
+		pi = make_pi_from_po(po.name)
+		self.assertEqual(pi.items[0].qty, 0)
+		self.assertEqual(pi.items[0].rate, 500)
+
+		pi.items[0].qty = 5
+		pi.submit()
+
+		self.assertEqual(pi.grand_total, 2500)
+
+		po.reload()
+		self.assertEqual(po.items[0].amount, 0)
+		self.assertEqual(po.items[0].billed_amt, 2500)
+		# PO still has qty 0, so billed % should be unset
+		self.assertFalse(po.per_billed)
+		self.assertEqual(po.status, "To Receive and Bill")
 
 	def test_create_purchase_receipt(self):
 		po = create_purchase_order(rate=10000, qty=10)
@@ -4319,7 +4402,7 @@ class TestPurchaseOrder(FrappeTestCase):
 		self.assertEqual(sle.qty_after_transaction, 2)
 
 	def test_create_po_pr_return_pr_TC_SCK_178(self):
-		from erpnext.buying.doctype.purchase_order.test_purchase_order import get_or_create_fiscal_year
+		from erpnext.stock.utils import get_or_create_fiscal_year
 
 		get_or_create_fiscal_year("_Test Company")
 		create_company()
@@ -9195,7 +9278,7 @@ def create_purchase_order(**args):
 				"item_code": args.item or args.item_code or "_Test Item",
 				"warehouse": args.warehouse or "_Test Warehouse - _TC",
 				"from_warehouse": args.from_warehouse,
-				"qty": args.qty or 10,
+				"qty": args.qty if args.qty is not None else 10,
 				"rate": args.rate or 500,
 				"schedule_date": add_days(nowdate(), 1),
 				"include_exploded_items": args.get("include_exploded_items", 1),
@@ -9699,59 +9782,6 @@ def create_fiscal_with_company(company):
 	fy_doc.year_end_date = end_date
 	fy_doc.append("companies", {"company": company})
 	fy_doc.submit()
-
-
-def get_or_create_fiscal_year(company):
-	from datetime import date, datetime
-
-	import frappe
-
-	current_date = datetime.today().date()
-
-	matching_fy_list = frappe.get_all(
-		"Fiscal Year",
-		filters={
-			"disabled": 0,
-			"year_start_date": ["<=", current_date],
-			"year_end_date": [">=", current_date],
-		},
-		fields=["name", "year_start_date", "year_end_date"],
-	)
-	is_company = False
-	if len(matching_fy_list) > 0:
-		for fy in matching_fy_list:
-			fiscal_year = frappe.get_doc("Fiscal Year", fy["name"])
-			for years in fiscal_year.companies:
-				if years.company == company:
-					is_company = True
-					break
-			if is_company:
-				break
-
-		if not is_company:
-			for rows in matching_fy_list:
-				try:
-					fiscal_year = frappe.get_doc("Fiscal Year", rows.name)
-					fiscal_year.append("companies", {"company": company})
-					fiscal_year.save()
-					break
-				except Exception as e:
-					print(f"Failed to get Fiscal Year {fy['name']}: {e}")
-					continue
-
-	else:
-		# No fiscal year includes current date — create a new one
-		current_year = current_date.year
-		first_date = date(current_year, 1, 1)
-		last_date = date(current_year, 12, 31)
-
-		fiscal_year = frappe.new_doc("Fiscal Year")
-		fiscal_year.year = f"{current_year}-{company}"
-		fiscal_year.year_start_date = first_date
-		fiscal_year.year_end_date = last_date
-		fiscal_year.company = company  # Required to avoid overlap error
-		fiscal_year.append("companies", {"company": company})
-		fiscal_year.save()
 
 
 def get_company_or_supplier():
