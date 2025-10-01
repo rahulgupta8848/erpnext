@@ -16,6 +16,83 @@ test_dependencies = ["Monthly Distribution"]
 
 
 class TestBudget(unittest.TestCase):
+	def setUp(self):
+		self.create_missing_records()
+
+	def create_missing_records(self):
+		company = "_Test Company"
+		if not frappe.db.exists("Account", "Expenses - _TC"):
+			frappe.get_doc({
+				"doctype": "Account",
+				"account_name": "Expenses - _TC",
+				"company": company,
+				"account_type": "Bank",
+				"is_group": 1,
+				"parent_account": "Equity - _TC"
+			}).insert(ignore_permissions=True)
+			frappe.db.commit()
+
+		if not frappe.db.exists("Account", "_Test Account Cost for Goods Sold - _TC - _TC"):
+			frappe.get_doc({
+				"doctype": "Account",
+				"account_name": "_Test Account Cost for Goods Sold - _TC",
+				"company": company,
+				"account_type": "Bank",
+				"is_group": 0,
+				"parent_account": "Expenses - _TC"
+			}).insert(ignore_permissions=True)
+			frappe.db.commit()
+
+	def test_budget_check_on_purchase_invoice(self):
+		from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
+		company = "_Test Company"
+		budget = make_budget(
+			company=company,
+			budget_against="Cost Center",
+			applicable_on_purchase_order=1
+		)
+
+		frappe.db.set_value("Budget",budget.name,"action_if_accumulated_monthly_budget_exceeded_on_po","Stop")
+
+		service_item = frappe.get_doc(
+			{
+				"doctype": "Item",
+				"item_code": "_Test Non Stock Item",
+				"item_group": "Services",
+				"is_stock_item": 0,
+				"gst_hsn_code": "004372",
+			}
+		)
+
+		if not frappe.db.exists("Item", service_item.item_code):
+			service_item.insert(ignore_permissions=True)
+
+		supplier = frappe.get_doc({
+				"doctype": "Supplier",
+				"supplier_name": "_Test Supplier",
+				"supplier_type": "Company",
+				"default_currency": "INR"
+			})
+
+		if not frappe.db.exists("Supplier", "_Test Supplier"):
+			supplier.insert(ignore_permissions=True)
+			frappe.db.commit()
+
+
+		expense_account = "_Test Account Cost for Goods Sold - _TC - _TC"
+		fiscal_year = get_fiscal_year(nowdate())[0]
+		with self.assertRaises(BudgetError):
+			pi = make_purchase_invoice(
+				company=company,
+				item=service_item,
+				qty=100,
+				rate=10000,
+				expense_account=expense_account,
+				supplier=supplier
+			)
+			pi.submit()
+
+
 	@if_app_installed("projects")
 	def test_monthly_budget_crossed_ignore(self):
 		set_total_expense_zero(nowdate(), "cost_center")
@@ -569,7 +646,7 @@ def make_budget(**args):
 	budget.append(
 		"accounts",
 		{
-			"account": "_Test Account Cost for Goods Sold - _TC",
+			"account": "_Test Account Cost for Goods Sold - _TC - _TC",
 			"budget_amount": 200000,
 			"child_wbs": wbs_name,
 		},
