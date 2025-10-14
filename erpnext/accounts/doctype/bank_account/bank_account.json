@@ -136,7 +136,8 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "IBAN",
-   "length": 30
+   "length": 34,
+   "options": "IBAN"
   },
   {
    "fieldname": "column_break_12",
@@ -231,6 +232,7 @@
    "label": "Opening Balance Date"
   }
  ],
+ "grid_page_length": 50,
  "links": [
   {
    "group": "Transactions",
@@ -273,7 +275,11 @@
    "link_fieldname": "default_bank_account"
   }
  ],
+<<<<<<< HEAD
  "modified": "2025-01-23 13:02:40.995541",
+=======
+ "modified": "2025-08-29 12:32:01.081687",
+>>>>>>> bd3a132868 (feat: set options for IBAN fields (backport #49377) (#49413))
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Account",
@@ -305,6 +311,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "bank,account",
  "sort_field": "modified",
  "sort_order": "DESC",
