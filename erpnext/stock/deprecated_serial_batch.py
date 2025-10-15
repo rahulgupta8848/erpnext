@@ -79,6 +79,7 @@ class DeprecatedBatchNoValuation:
 		for ledger in entries:
 			self.stock_value_differece[ledger.batch_no] += flt(ledger.batch_value)
 			self.available_qty[ledger.batch_no] += flt(ledger.batch_qty)
+			self.total_qty[ledger.batch_no] += flt(ledger.batch_qty)
 
 	@deprecated
 	def get_sle_for_batches(self):
@@ -231,7 +232,8 @@ class DeprecatedBatchNoValuation:
 		batch_data = query.run(as_dict=True)
 		for d in batch_data:
 			self.available_qty[d.batch_no] += flt(d.batch_qty)
-		
+			self.total_qty[d.batch_no] += flt(d.batch_qty)
+
 		for d in batch_data:
 			if self.available_qty.get(d.batch_no):
 				self.non_batchwise_balance_value[d.batch_no] += flt(self.last_sle.stock_value)
@@ -325,6 +327,8 @@ class DeprecatedBatchNoValuation:
 		batch_data = query.run(as_dict=True)
 		for d in batch_data:
 			self.available_qty[d.batch_no] += flt(d.batch_qty)
+			self.total_qty[d.batch_no] += flt(d.batch_qty)
+
 		if not self.last_sle:
 			return
 		for batch_no in self.available_qty:
