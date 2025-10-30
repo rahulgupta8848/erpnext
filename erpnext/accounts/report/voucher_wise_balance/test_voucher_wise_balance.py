@@ -40,3 +40,6 @@ class TestVoucherWiseBalance(AccountsTestMixin, FrappeTestCase):
         _, data = execute(filters)
 
         self.assertTrue(data, "No data returned from voucher wise balance report")
+
+
+#comment
