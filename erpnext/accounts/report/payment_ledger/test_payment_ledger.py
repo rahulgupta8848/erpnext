@@ -74,7 +74,6 @@ from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 from erpnext.accounts.report.payment_ledger.payment_ledger import execute
 
-
 class TestPaymentLedger(FrappeTestCase):
 	def setUp(self):
 		self.create_company()
@@ -142,3 +141,4 @@ class TestPaymentLedger(FrappeTestCase):
 		columns, data = execute(filters=filters)
 		outstanding = [x for x in data if x.get("against_voucher_no") == "Outstanding:"]
 		self.assertEqual(outstanding[0].get("amount"), 100)
+		
