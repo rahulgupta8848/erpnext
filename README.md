@@ -43,6 +43,7 @@ Running a business is a complex task - handling invoices, tracking stock, managi
 
 <details open>
 
+
 <summary>More</summary>
 	<img src="https://erpnext.com/files/v16_bom.png"/>
 	<img src="https://erpnext.com/files/v16_stock_summary.png"/>
