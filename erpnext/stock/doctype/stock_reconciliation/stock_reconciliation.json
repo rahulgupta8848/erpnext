@@ -18,6 +18,7 @@
   "set_warehouse",
   "section_break_22",
   "scan_barcode",
+  "last_scanned_warehouse",
   "column_break_12",
   "scan_mode",
   "sb9",
@@ -72,6 +73,7 @@
    "reqd": 1
   },
   {
+   "default": "Now",
    "fieldname": "posting_time",
    "fieldtype": "Time",
    "in_list_view": 1,
@@ -177,6 +179,13 @@
   {
    "fieldname": "column_break_12",
    "fieldtype": "Column Break"
+   },
+  {
+   "depends_on": "eval: doc.last_scanned_warehouse",
+   "fieldname": "last_scanned_warehouse",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Last Scanned Warehouse"
   }
  ],
  "icon": "fa fa-upload-alt",
@@ -206,6 +215,7 @@
  "search_fields": "posting_date",
  "show_name_in_global_search": 1,
  "sort_field": "modified",
+ "row_format": "Dynamic",
  "sort_order": "DESC",
  "states": []
 }

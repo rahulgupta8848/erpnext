@@ -339,7 +339,7 @@ class TestPaymentRequest(FrappeTestCase):
 		pe = pr.create_payment_entry()
 		self.assertEqual(pe.paid_amount, 800)  # paid amount set from pr's outstanding amount
 		self.assertEqual(pe.references[0].allocated_amount, 800)
-		self.assertEqual(pe.references[0].outstanding_amount, 800)  # for Orders it is not zero
+		self.assertEqual(pe.references[0].outstanding_amount, 0)  # Also for orders it will zero
 		self.assertEqual(pe.references[0].payment_request, pr.name)
 		so.load_from_db()
 		pr.load_from_db()

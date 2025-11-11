@@ -32,6 +32,7 @@
   "ignore_pricing_rule",
   "items_section",
   "scan_barcode",
+  "last_scanned_warehouse",
   "items",
   "sec_break23",
   "total_qty",
@@ -1041,6 +1042,13 @@
     "label": "Company Contact Person",
     "options": "Contact",
     "print_hide": 1
+    },
+  {
+   "depends_on": "eval: doc.last_scanned_warehouse",
+   "fieldname": "last_scanned_warehouse",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Last Scanned Warehouse"
    }
  ],
  "icon": "fa fa-shopping-cart",

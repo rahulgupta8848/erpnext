@@ -114,7 +114,7 @@ def make_dimension_in_accounting_doctypes(doc, doclist=None):
 
 	doc_count = len(get_accounting_dimensions())
 	count = 0
-	repostable_doctypes = get_allowed_types_from_settings()
+	repostable_doctypes = get_allowed_types_from_settings(child_doc=True)
 
 	for doctype in doclist:
 		meta = frappe.get_meta(doctype, cached=False)

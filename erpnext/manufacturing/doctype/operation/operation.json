@@ -70,7 +70,8 @@
    "fieldname": "batch_size",
    "fieldtype": "Int",
    "label": "Batch Size",
-   "mandatory_depends_on": "create_job_card_based_on_batch_size"
+   "mandatory_depends_on": "create_job_card_based_on_batch_size",
+   "non_negative": 1
   },
   {
    "default": "0",

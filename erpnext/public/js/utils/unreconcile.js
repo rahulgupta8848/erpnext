@@ -131,8 +131,8 @@ erpnext.accounts.unreconcile_payment = {
 			selection_map = selections.map(function (elem) {
 				return {
 					company: elem.company,
-					voucher_type: elem.voucher_type,
-					voucher_no: elem.voucher_no,
+					voucher_type: elem.reference_doctype,
+					voucher_no: elem.reference_name,
 					against_voucher_type: frm.doc.doctype,
 					against_voucher_no: frm.doc.name,
 					allocated_amount: elem.allocated_amount
@@ -144,8 +144,8 @@ erpnext.accounts.unreconcile_payment = {
 					company: elem.company,
 					voucher_type: frm.doc.doctype,
 					voucher_no: frm.doc.name,
-					against_voucher_type: elem.voucher_type,
-					against_voucher_no: elem.voucher_no,
+					against_voucher_type: elem.reference_doctype,
+					against_voucher_no: elem.reference_name,
 					allocated_amount: elem.allocated_amount
 				};
 			});
@@ -160,7 +160,7 @@ erpnext.accounts.unreconcile_payment = {
 			let child_table_fields = [
 				{
 					label: __("Voucher Type"),
-					fieldname: "voucher_type",
+					fieldname: "reference_doctype",
 					fieldtype: "Dynamic Link",
 					options: "DocType",
 					in_list_view: 1,
@@ -168,9 +168,9 @@ erpnext.accounts.unreconcile_payment = {
 				},
 				{
 					label: __("Voucher No"),
-					fieldname: "voucher_no",
+					fieldname: "reference_name",
 					fieldtype: "Link",
-					options: "voucher_type",
+					options: "reference_doctype",
 					in_list_view: 1,
 					read_only: 1,
 				},

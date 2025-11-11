@@ -4,6 +4,7 @@
 
 import frappe
 from frappe import _
+import json
 from frappe.contacts.doctype.address.address import get_company_address
 from frappe.desk.notifications import clear_doctype_notifications
 from frappe.model.mapper import get_mapped_doc
@@ -91,7 +92,6 @@ class DeliveryNote(SellingController):
 		per_billed: DF.Percent
 		per_installed: DF.Percent
 		per_returned: DF.Percent
-		pick_list: DF.Link | None
 		plc_conversion_rate: DF.Float
 		po_date: DF.Date | None
 		po_no: DF.SmallText | None
@@ -423,7 +423,6 @@ class DeliveryNote(SellingController):
 		self.update_prevdoc_status()
 		self.update_billing_status()
 
-		self.update_stock_reservation_entries()
 
 		if not self.is_return:
 			self.check_credit_limit()
@@ -438,6 +437,7 @@ class DeliveryNote(SellingController):
 			self.make_bundle_using_old_serial_batch_fields(table_name)
 		
 		self.validate_standalone_serial_nos_customer()
+		self.update_stock_reservation_entries()
 
 		# Updating stock ledger should always be called after updating prevdoc status,
 		# because updating reserved qty in bin depends upon updated delivered qty in SO
@@ -796,6 +796,10 @@ def get_returned_qty_map(delivery_note):
 
 @frappe.whitelist()
 def make_sales_invoice(source_name, target_doc=None, args=None):
+	if args is None:
+		args = {}
+	if isinstance(args, str):
+		args = json.loads(args)
 	doc = frappe.get_doc("Delivery Note", source_name)
 
 	to_make_invoice_qty_map = {}
@@ -847,6 +851,11 @@ def make_sales_invoice(source_name, target_doc=None, args=None):
 
 		return pending_qty
 
+	def select_item(d):
+		filtered_items = args.get("filtered_children", [])
+		child_filter = d.name in filtered_items if filtered_items else True
+		return child_filter
+
 	doc = get_mapped_doc(
 		"Delivery Note",
 		source_name,
@@ -870,6 +879,7 @@ def make_sales_invoice(source_name, target_doc=None, args=None):
 				"filter": lambda d: get_pending_qty(d) <= 0
 				if not doc.get("is_return")
 				else get_pending_qty(d) > 0,
+				"condition": select_item,
 			},
 			"Sales Taxes and Charges": {
 				"doctype": "Sales Taxes and Charges",

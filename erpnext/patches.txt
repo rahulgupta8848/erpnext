@@ -341,11 +341,11 @@ erpnext.patches.v15_0.set_reserved_stock_in_bin
 erpnext.patches.v14_0.create_accounting_dimensions_in_supplier_quotation
 execute:frappe.db.set_single_value("Buying Settings", "project_update_frequency", "Each Transaction")
 erpnext.patches.v14_0.create_accounting_dimensions_in_reconciliation_tool
-erpnext.patches.v15_0.allow_on_submit_dimensions_for_repostable_doctypes
+erpnext.patches.v15_0.allow_on_submit_dimensions_for_repostable_doctypes #2025-06-19
 erpnext.patches.v14_0.update_flag_for_return_invoices #2024-03-22
 erpnext.patches.v15_0.create_accounting_dimensions_in_payment_request
 erpnext.patches.v14_0.update_pos_return_ledger_entries #2024-08-16
-erpnext.patches.v15_0.create_advance_payment_ledger_records
+erpnext.patches.v15_0.create_advance_payment_ledger_records #2025-07-04
 # below migration patch should always run last
 erpnext.patches.v14_0.migrate_gl_to_payment_ledger
 erpnext.stock.doctype.delivery_note.patches.drop_unused_return_against_index # 2023-12-20
@@ -385,3 +385,5 @@ erpnext.patches.v15_0.set_cancelled_status_to_cancelled_pos_invoice
 erpnext.patches.v15_0.rename_group_by_to_categorize_by_in_custom_reports
 erpnext.patches.v14_0.update_full_name_in_contract
 erpnext.patches.v15_0.drop_sle_indexes
+erpnext.patches.v15_0.update_payment_ledger_entries_against_advance_doctypes
+erpnext.patches.v15_0.update_uae_zero_rated_fetch
