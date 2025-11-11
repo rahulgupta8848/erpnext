@@ -24,7 +24,8 @@
    "fieldname": "time_in_mins",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Operation Time"
+   "label": "Operation Time",
+   "non_negative": 1
   },
   {
    "fieldname": "column_break_5",

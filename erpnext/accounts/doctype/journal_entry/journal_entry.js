@@ -160,6 +160,7 @@ frappe.ui.form.on("Journal Entry", {
 		});
 
 		erpnext.accounts.dimensions.update_dimension(frm, frm.doctype);
+		erpnext.utils.set_letter_head(frm);
 	},
 
 	voucher_type: function (frm) {

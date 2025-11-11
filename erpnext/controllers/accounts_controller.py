@@ -397,7 +397,6 @@ class AccountsController(TransactionBase):
 	def on_trash(self):
 		from erpnext.accounts.utils import delete_exchange_gain_loss_journal
 
-		self._remove_advance_payment_ledger_entries()
 		self._remove_references_in_repost_doctypes()
 		self._remove_references_in_unreconcile()
 		self.remove_serial_and_batch_bundle()
@@ -425,6 +424,8 @@ class AccountsController(TransactionBase):
 			frappe.qb.from_(sle).delete().where(
 				(sle.voucher_type == self.doctype) & (sle.voucher_no == self.name)
 			).run()
+
+			self._remove_advance_payment_ledger_entries()
 
 	def remove_serial_and_batch_bundle(self):
 		bundles = frappe.get_all(
@@ -2893,64 +2894,7 @@ class AccountsController(TransactionBase):
 	def get_advance_payment_doctypes(self) -> list:
 		return _get_advance_payment_doctypes()
 
-	def make_advance_payment_ledger_for_journal(self):
-		advance_payment_doctypes = self.get_advance_payment_doctypes()
-		advance_doctype_references = [
-			x for x in self.accounts if x.reference_type in advance_payment_doctypes
-		]
-
-		for x in advance_doctype_references:
-			# Looking for payments
-			dr_or_cr = (
-				"credit_in_account_currency"
-				if x.account_type == "Receivable"
-				else "debit_in_account_currency"
-			)
-
-			amount = x.get(dr_or_cr)
-			if amount > 0:
-				doc = frappe.new_doc("Advance Payment Ledger Entry")
-				doc.company = self.company
-				doc.voucher_type = self.doctype
-				doc.voucher_no = self.name
-				doc.against_voucher_type = x.reference_type
-				doc.against_voucher_no = x.reference_name
-				doc.amount = amount if self.docstatus == 1 else -1 * amount
-				doc.event = "Submit" if self.docstatus == 1 else "Cancel"
-				doc.currency = x.account_currency
-				doc.flags.ignore_permissions = 1
-				doc.save()
-
-	def make_advance_payment_ledger_for_payment(self):
-		advance_payment_doctypes = self.get_advance_payment_doctypes()
-		advance_doctype_references = [
-			x for x in self.references if x.reference_doctype in advance_payment_doctypes
-		]
-		currency = (
-			self.paid_from_account_currency
-			if self.payment_type == "Receive"
-			else self.paid_to_account_currency
-		)
-		for x in advance_doctype_references:
-			doc = frappe.new_doc("Advance Payment Ledger Entry")
-			doc.company = self.company
-			doc.voucher_type = self.doctype
-			doc.voucher_no = self.name
-			doc.against_voucher_type = x.reference_doctype
-			doc.against_voucher_no = x.reference_name
-			doc.amount = x.allocated_amount if self.docstatus == 1 else -1 * x.allocated_amount
-			doc.currency = currency
-			doc.event = "Submit" if self.docstatus == 1 else "Cancel"
-			doc.flags.ignore_permissions = 1
-			doc.save()
-
-	def make_advance_payment_ledger_entries(self):
-		if self.docstatus != 0:
-			if self.doctype == "Journal Entry":
-				self.make_advance_payment_ledger_for_journal()
-			elif self.doctype == "Payment Entry":
-				self.make_advance_payment_ledger_for_payment()
-
+	
 	def set_transaction_currency_and_rate_in_gl_map(self, gl_entries):
 		for x in gl_entries:
 			x["transaction_currency"] = self.currency

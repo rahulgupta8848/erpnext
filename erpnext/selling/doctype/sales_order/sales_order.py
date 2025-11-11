@@ -404,6 +404,7 @@ class SalesOrder(SellingController):
 			"GL Entry",
 			"Stock Ledger Entry",
 			"Payment Ledger Entry",
+			"Advance Payment Ledger Entry",
 			"Unreconcile Payment",
 			"Unreconcile Payment Entries",
 		)
@@ -924,6 +925,11 @@ def make_delivery_note(source_name, target_doc=None, kwargs=None):
 		"Sales Team": {"doctype": "Sales Team", "add_if_empty": True},
 	}
 
+	def select_item(d):
+		filtered_items = kwargs.get("filtered_children", [])
+		child_filter = d.name in filtered_items if filtered_items else True
+		return child_filter
+
 	def set_missing_values(source, target):
 		if kwargs.get("ignore_pricing_rule"):
 			# Skip pricing rule when the dn is creating from the pick list
@@ -986,7 +992,7 @@ def make_delivery_note(source_name, target_doc=None, kwargs=None):
 				"name": "so_detail",
 				"parent": "against_sales_order",
 			},
-			"condition": condition,
+			"condition": lambda d: condition(d) and select_item(d),
 			"postprocess": update_item,
 		}
 
@@ -1042,7 +1048,11 @@ def make_delivery_note(source_name, target_doc=None, kwargs=None):
 
 
 @frappe.whitelist()
-def make_sales_invoice(source_name, target_doc=None, ignore_permissions=False):
+def make_sales_invoice(source_name, target_doc=None, ignore_permissions=False, args=None):
+	if args is None:
+		args = {}
+	if isinstance(args, str):
+		args = json.loads(args)
 	def postprocess(source, target):
 		set_missing_values(source, target)
 		# Get the advance paid Journal Entries in Sales Invoice Advance
@@ -1089,6 +1099,11 @@ def make_sales_invoice(source_name, target_doc=None, ignore_permissions=False):
 
 			if cost_center:
 				target.cost_center = cost_center
+
+	def select_item(d):
+		filtered_items = args.get("filtered_children", [])
+		child_filter = d.name in filtered_items if filtered_items else True
+		return child_filter
 
 	doclist = get_mapped_doc(
 		"Sales Order",
@@ -1711,8 +1726,8 @@ def create_pick_list(source_name, target_doc=None):
 
 	doc.purpose = "Delivery"
 
-	doc.set_item_locations()
-
+	if not doc.pick_manually:
+		doc.set_item_locations()
 	return doc
 
 

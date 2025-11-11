@@ -471,7 +471,12 @@ def get_parent_row_no(doc, name):
 	for row in doc.items:
 		if row.name == name:
 			return row.idx
-	frappe.msgprint(_("Parent Row No not found for {0}").format(name))
+	if name == doc.name:
+		return None
+
+	frappe.msgprint(_("Parent Row No not found for {0}").format(name), alert=True)
+
+	return None
 
 
 @frappe.whitelist()

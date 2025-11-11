@@ -22,7 +22,9 @@
   "exchange_gain_loss",
   "account",
   "payment_request",
-  "payment_request_outstanding"
+  "payment_request_outstanding",
+  "advance_voucher_type",
+  "advance_voucher_no"
  ],
  "fields": [
   {
@@ -150,6 +152,22 @@
    "fieldname": "reconcile_effect_on",
    "fieldtype": "Date",
    "label": "Reconcile Effect On",
+   "read_only": 1
+   },
+  {
+   "columns": 2,
+   "fieldname": "advance_voucher_type",
+   "fieldtype": "Link",
+   "label": "Advance Voucher Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "advance_voucher_no",
+   "fieldtype": "Dynamic Link",
+   "label": "Advance Voucher No",
+   "options": "advance_voucher_type",
    "read_only": 1
   }
  ],

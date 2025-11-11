@@ -111,6 +111,7 @@ class BankAccount(Document):  # pragma: no cover
 					"party_type": self.party_type,
 					"party": self.party,
 					"is_company_account": self.is_company_account,
+					"company": self.company,
 					"is_default": 1,
 					"disabled": 0,
 				},

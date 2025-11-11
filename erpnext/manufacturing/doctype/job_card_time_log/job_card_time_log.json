@@ -42,7 +42,8 @@
    "fieldname": "completed_qty",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Completed Qty"
+   "label": "Completed Qty",
+   "non_negative": 1
   },
   {
    "fieldname": "employee",

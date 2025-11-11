@@ -3,6 +3,7 @@
 
 
 import frappe
+import json
 from frappe import _, throw
 from frappe.desk.notifications import clear_doctype_notifications
 from frappe.model.mapper import get_mapped_doc
@@ -436,7 +437,7 @@ class PurchaseReceipt(BuyingController):
 		self.make_tax_gl_entries(gl_entries, via_landed_cost_voucher)
 		update_regional_gl_entries(gl_entries, self)
 
-		return process_gl_map(gl_entries)
+		return process_gl_map(gl_entries, from_repost=frappe.flags.through_repost_item_valuation)
 
 	def make_item_gl_entries(self, gl_entries, warehouse_account=None):
 		from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
@@ -1175,6 +1176,10 @@ def get_item_wise_returned_qty(pr_doc):
 
 @frappe.whitelist()
 def make_purchase_invoice(source_name, target_doc=None, args=None):
+	if args is None:
+		args = {}
+	if isinstance(args, str):
+		args = json.loads(args)
 	from erpnext.accounts.party import get_payment_terms_template
 
 	doc = frappe.get_doc("Purchase Receipt", source_name)
@@ -1226,6 +1231,11 @@ def make_purchase_invoice(source_name, target_doc=None, args=None):
 
 		return pending_qty, returned_qty
 
+	def select_item(d):
+		filtered_items = args.get("filtered_children", [])
+		child_filter = d.name in filtered_items if filtered_items else True
+		return child_filter
+
 	fields = {
 		"Purchase Receipt": {
 			"doctype": "Purchase Invoice",
@@ -1248,9 +1258,10 @@ def make_purchase_invoice(source_name, target_doc=None, args=None):
 				"purchase_order": "purchase_order",
 			},
 			"postprocess": update_item,
-			"filter": lambda d: get_pending_qty(d)[0] <= 0
-			if not doc.get("is_return")
-			else get_pending_qty(d)[0] > 0,
+			"filter": lambda d: (
+					get_pending_qty(d)[0] <= 0 if not doc.get("is_return") else get_pending_qty(d)[0] > 0
+				)
+				and select_item(d),
 		},
 		"Purchase Taxes and Charges": {
 			"doctype": "Purchase Taxes and Charges",

@@ -5,12 +5,11 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
 
-from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
-from erpnext.accounts.doctype.payment_entry.test_payment_entry import create_payment_entry, make_test_item
+from erpnext.accounts.doctype.payment_entry.test_payment_entry import create_payment_entry
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 from erpnext.accounts.party import get_party_account
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
-from erpnext.selling.doctype.customer.test_customer import get_customer_dict
+from erpnext.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
 from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 from erpnext.selling.doctype.sales_order.test_sales_order import make_sales_order
 
@@ -19,6 +18,7 @@ class TestUnreconcilePayment(AccountsTestMixin, FrappeTestCase):
 	def setUp(self):
 		self.create_company()
 		self.create_customer()
+		self.create_supplier()
 		self.create_usd_receivable_account()
 		self.create_item()
 		self.clear_old_entries()
@@ -366,18 +366,19 @@ class TestUnreconcilePayment(AccountsTestMixin, FrappeTestCase):
 		# Assert 'Advance Paid'
 		so.reload()
 		pe.reload()
-		self.assertEqual(so.advance_paid, 100)
+		self.assertEqual(so.advance_paid, 0)
 		self.assertEqual(len(pe.references), 0)
 		self.assertEqual(pe.unallocated_amount, 100)
 
 		pe.cancel()
 		so.reload()
-		self.assertEqual(so.advance_paid, 100)
+		self.assertEqual(so.advance_paid, 0)
 
 	def test_06_unreconcile_advance_from_payment_entry(self):
 		self.enable_advance_as_liability()
 		so1 = self.create_sales_order()
 		so2 = self.create_sales_order()
+
 		pe = self.create_payment_entry()
 		# Allocation payment against Sales Order
 		pe.paid_amount = 260
@@ -390,11 +391,13 @@ class TestUnreconcilePayment(AccountsTestMixin, FrappeTestCase):
 			{"reference_doctype": so2.doctype, "reference_name": so2.name, "allocated_amount": 110},
 		)
 		pe.save().submit()
+
 		# Assert 'Advance Paid'
 		so1.reload()
 		self.assertEqual(so1.advance_paid, 150)
 		so2.reload()
 		self.assertEqual(so2.advance_paid, 110)
+
 		unreconcile = frappe.get_doc(
 			{
 				"doctype": "Unreconcile Payment",
@@ -410,14 +413,16 @@ class TestUnreconcilePayment(AccountsTestMixin, FrappeTestCase):
 		# unreconcile so2
 		unreconcile.remove(unreconcile.allocations[0])
 		unreconcile.save().submit()
+
 		# Assert 'Advance Paid'
 		so1.reload()
 		so2.reload()
 		pe.reload()
 		self.assertEqual(so1.advance_paid, 150)
-		self.assertEqual(so2.advance_paid, 110)
+		self.assertEqual(so2.advance_paid, 0)
 		self.assertEqual(len(pe.references), 1)
 		self.assertEqual(pe.unallocated_amount, 110)
+
 		self.disable_advance_as_liability()
 
 	def test_07_adv_from_so_to_invoice(self):
@@ -430,11 +435,14 @@ class TestUnreconcilePayment(AccountsTestMixin, FrappeTestCase):
 			{"reference_doctype": so.doctype, "reference_name": so.name, "allocated_amount": 1000},
 		)
 		pe.save().submit()
+
 		# Assert 'Advance Paid'
 		so.reload()
 		self.assertEqual(so.advance_paid, 1000)
+
 		si = make_sales_invoice(so.name)
 		si.insert().submit()
+
 		pr = frappe.get_doc(
 			{
 				"doctype": "Payment Reconciliation",
@@ -453,54 +461,82 @@ class TestUnreconcilePayment(AccountsTestMixin, FrappeTestCase):
 		payments = [x.as_dict() for x in pr.get("payments")]
 		pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
 		pr.reconcile()
+
 		self.assertEqual(len(pr.get("invoices")), 0)
 		self.assertEqual(len(pr.get("payments")), 0)
+
 		# Assert 'Advance Paid'
 		so.reload()
 		self.assertEqual(so.advance_paid, 1000)
+
+		unreconcile = frappe.get_doc(
+			{
+				"doctype": "Unreconcile Payment",
+				"company": self.company,
+				"voucher_type": pe.doctype,
+				"voucher_no": pe.name,
+			}
+		)
+		unreconcile.add_references()
+		unreconcile.allocations = [x for x in unreconcile.allocations if x.reference_name == si.name]
+		unreconcile.save().submit()
+
+		# after unreconcilaition advance paid will be reduced
+		# Assert 'Advance Paid'
+		so.reload()
+		self.assertEqual(so.advance_paid, 0)
+
 		self.disable_advance_as_liability()
 
-	def test_doc_has_references_TC_S_216(self):
-		from .unreconcile_payment import doc_has_references, get_linked_payments_for_doc
-
-		customer = frappe.get_doc(get_customer_dict("_Test Unreconcile Payment Customer")).insert(
-			ignore_permissions=True
+	def test_unreconcile_advance_from_journal_entry(self):
+		po = create_purchase_order(
+			company=self.company,
+			supplier=self.supplier,
+			item=self.item,
+			qty=1,
+			rate=100,
+			transaction_date=today(),
+			do_not_submit=False,
 		)
-		item = make_test_item("__Test Unreconcile Item")
-		si = create_sales_invoice(item_code=item.item_code, customer=customer.name, do_not_save=True)
-		si.taxes_and_charges = ""
-		si.taxes = []
-		si.insert(ignore_permissions=True)
-		si.submit()
-		self.assertEqual(si.docstatus, 1)
 
-		pe = get_payment_entry(si.doctype, si.name)
-		pe.insert(ignore_permissions=True)
-		pe.submit()
-		self.assertEqual(pe.docstatus, 1)
+		je = frappe.get_doc(
+			{
+				"doctype": "Journal Entry",
+				"company": self.company,
+				"voucher_type": "Journal Entry",
+				"posting_date": po.transaction_date,
+				"multi_currency": True,
+				"accounts": [
+					{
+						"account": "Creditors - _TC",
+						"party_type": "Supplier",
+						"party": po.supplier,
+						"debit_in_account_currency": 100,
+						"is_advance": "Yes",
+						"reference_type": po.doctype,
+						"reference_name": po.name,
+					},
+					{"account": "Cash - _TC", "credit_in_account_currency": 100},
+				],
+			}
+		)
+		je.save().submit()
+		po.reload()
+		self.assertEqual(po.advance_paid, 100)
 
-		# payment entry reference
-		per = doc_has_references(pe.doctype, pe.name)
-		self.assertEqual(per, 1)
+		unreconcile = frappe.get_doc(
+			{
+				"doctype": "Unreconcile Payment",
+				"company": self.company,
+				"voucher_type": je.doctype,
+				"voucher_no": je.name,
+			}
+		)
+		unreconcile.add_references()
+		self.assertEqual(len(unreconcile.allocations), 1)
+		allocations = [x.reference_name for x in unreconcile.allocations]
+		self.assertEqual([po.name], allocations)
+		unreconcile.save().submit()
 
-		# sales invoice reference
-		sir = doc_has_references(si.doctype, si.name)
-		self.assertEqual(sir, 1)
-
-		linked_pe_doc = get_linked_payments_for_doc(pe.company, pe.doctype, pe.name)
-		if linked_pe_doc:
-			for row in linked_pe_doc:
-				self.assertEqual(row.get("company"), "_Test Company")
-				self.assertEqual(row.get("voucher_type"), "Sales Invoice")
-				self.assertEqual(row.get("voucher_no"), si.name)
-				self.assertEqual(row.get("allocated_amount"), 100)
-
-		linked_si_doc = get_linked_payments_for_doc(si.company, si.doctype, si.name)
-		if linked_si_doc:
-			for row in linked_si_doc:
-				self.assertEqual(row.get("company"), "_Test Company")
-				self.assertEqual(row.get("voucher_type"), "Payment Entry")
-				self.assertEqual(row.get("voucher_no"), pe.name)
-				self.assertEqual(row.get("allocated_amount"), 100)
-
-		self.assertFalse(get_linked_payments_for_doc(si.doctype, si.name))
+		po.reload()
+		self.assertEqual(po.advance_paid, 0)

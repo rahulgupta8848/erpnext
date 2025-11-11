@@ -159,6 +159,7 @@
    "fieldname": "total_completed_qty",
    "fieldtype": "Float",
    "label": "Total Completed Qty",
+   "non_negative": 1,
    "read_only": 1
   },
   {

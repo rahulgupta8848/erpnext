@@ -149,6 +149,9 @@ erpnext.accounts.PurchaseInvoice = class PurchaseInvoice extends erpnext.buying.
 							per_billed: ["<", 99.99],
 							company: me.frm.doc.company,
 						},
+						allow_child_item_selection: true,
+						child_fieldname: "items",
+						child_columns: ["item_code", "item_name", "qty", "amount", "billed_amt"],
 					});
 				},
 				__("Get Items From")

@@ -7,7 +7,7 @@ import frappe
 from frappe import _, qb
 from frappe.model.document import Document
 from frappe.utils.data import comma_and
-
+from frappe.desk.form.linked_with import get_child_tables_of_doctypes
 from erpnext.stock import get_warehouse_account_map
 
 
@@ -169,6 +169,10 @@ def start_repost(account_repost_doc=str) -> None:
 					frappe.db.delete(
 						"Payment Ledger Entry", filters={"voucher_type": doc.doctype, "voucher_no": doc.name}
 					)
+					frappe.db.delete(
+						"Advance Payment Ledger Entry",
+						filters={"voucher_type": doc.doctype, "voucher_no": doc.name},
+					)
 
 				if doc.doctype in ["Sales Invoice", "Purchase Invoice"]:
 					if not repost_doc.delete_cancelled_entries:
@@ -204,8 +208,8 @@ def start_repost(account_repost_doc=str) -> None:
 						doc.make_gl_entries()
 
 
-def get_allowed_types_from_settings():
-	return [
+def get_allowed_types_from_settings(child_doc: bool = False):
+	repost_docs = [
 		x.document_type
 		for x in frappe.db.get_all(
 			"Repost Allowed Types",
@@ -214,6 +218,22 @@ def get_allowed_types_from_settings():
 			order_by="modified desc",
 		)
 	]
+	result = repost_docs
+
+	if repost_docs and child_doc:
+		result.extend(get_child_docs(repost_docs))
+
+	return result
+
+
+def get_child_docs(doc: list) -> list:
+	child_doc = []
+	doc = get_child_tables_of_doctypes(doc)
+	for child_list in doc.values():
+		for child in child_list:
+			if child.get("child_table"):
+				child_doc.append(child["child_table"])
+	return child_doc
 
 
 def validate_docs_for_deferred_accounting(sales_docs, purchase_docs):
