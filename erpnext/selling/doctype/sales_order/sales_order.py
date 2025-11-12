@@ -813,6 +813,16 @@ def make_material_request(source_name, target_doc=None):
 		)
 
 	def update_item(source, target, source_parent):
+		def get_billed_qty(so_item_name):
+			from frappe.query_builder.functions import Sum
+
+			table = frappe.qb.DocType("Sales Invoice Item")
+			query = (
+				frappe.qb.from_(table)
+				.select(Sum(table.qty).as_("qty"))
+				.where((table.docstatus == 1) & (table.so_detail == so_item_name))
+			)
+			return query.run(pluck="qty")[0] or 0
 		# qty is for packed items, because packed items don't have stock_qty field
 		if "project" in frappe.get_installed_apps():
 			target.project = source_parent.project
@@ -1085,8 +1095,8 @@ def make_sales_invoice(source_name, target_doc=None, ignore_permissions=False, a
 		target.amount = flt(source.amount) - flt(source.billed_amt)
 		target.base_amount = target.amount * flt(source_parent.conversion_rate)
 		target.qty = (
-			target.amount / flt(source.rate)
-			if (source.rate and source.billed_amt)
+			source.qty - get_billed_qty(source.name)
+			if (source.qty and source.billed_amt)
 			else source.qty - source.returned_qty
 		)
 
