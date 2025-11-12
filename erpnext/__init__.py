@@ -5,7 +5,7 @@ import frappe
 from frappe.utils.user import is_website_user
 
 
-__version__ = "15.75.1"
+__version__ = "15.78.1"
 
 
 
