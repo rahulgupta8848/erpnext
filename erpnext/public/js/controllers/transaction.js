@@ -548,6 +548,12 @@ erpnext.TransactionController = class TransactionController extends erpnext.taxe
 
 	item_code(doc, cdt, cdn) {
 		var me = this;
+		frappe.flags.dialog_set = false;
+
+		}
+	}
+
+	process_item_selection(doc, cdt, cdn) {
 		var item = frappe.get_doc(cdt, cdn);
 		var update_stock = 0, show_batch_dialog = 0;
 
@@ -920,8 +926,15 @@ erpnext.TransactionController = class TransactionController extends erpnext.taxe
 				return;
 			}
 
-			var party_type = frappe.meta.has_field(me.frm.doc.doctype, "customer") ? "Customer" : "Supplier";
-			var party_name = me.frm.doc[party_type.toLowerCase()];
+			var party_type, party_name;
+			if( me.frm.doc.doctype == "Quotation" && me.frm.doc.quotation_to == "Customer"){
+				party_type = "Customer",
+				party_name = me.frm.doc.party_name
+			}
+			else{
+				party_type = frappe.meta.has_field(me.frm.doc.doctype, "customer") ? "Customer" : "Supplier";
+				party_name = me.frm.doc[party_type.toLowerCase()];
+			}
 			if (party_name) {
 				frappe.call({
 					method: "frappe.client.get_value",

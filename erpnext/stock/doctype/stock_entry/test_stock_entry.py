@@ -6263,6 +6263,8 @@ def create_bom(bom_item, rm_items, company=None, qty=None, properties=None):
 
 	return bom
 
+	
+
 
 def make_serialized_item(**args):
 	args = frappe._dict(args)

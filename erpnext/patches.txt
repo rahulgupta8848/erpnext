@@ -387,3 +387,4 @@ erpnext.patches.v14_0.update_full_name_in_contract
 erpnext.patches.v15_0.drop_sle_indexes
 erpnext.patches.v15_0.update_payment_ledger_entries_against_advance_doctypes
 erpnext.patches.v15_0.update_uae_zero_rated_fetch
+erpnext.patches.v15_0.update_fieldname_in_accounting_dimension_filter

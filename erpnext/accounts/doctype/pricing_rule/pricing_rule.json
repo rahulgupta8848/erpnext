@@ -173,6 +173,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.apply_on != 'Transaction'",
    "fieldname": "is_cumulative",
    "fieldtype": "Check",
    "label": "Is Cumulative"

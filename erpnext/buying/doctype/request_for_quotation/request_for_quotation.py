@@ -13,7 +13,7 @@ from frappe.query_builder import DocType
 from frappe.utils import get_url
 from frappe.utils.print_format import download_pdf
 from frappe.utils.user import get_user_fullname
-
+from frappe.query_builder import Order
 from erpnext.accounts.party import get_party_account_currency, get_party_details
 from erpnext.buying.utils import validate_for_items
 from erpnext.controllers.buying_controller import BuyingController
@@ -271,7 +271,12 @@ class RequestforQuotation(BuyingController):
 		email_template = frappe.get_doc("Email Template", self.email_template)
 		message = frappe.render_template(email_template.response_, doc_args)
 		subject = frappe.render_template(email_template.subject, doc_args)
-		sender = frappe.session.user not in STANDARD_USERS and frappe.session.user or None
+		fixed_procurement_email = frappe.db.get_single_value("Buying Settings", "fixed_email")
+		if fixed_procurement_email:
+			sender = frappe.db.get_value("Email Account", fixed_procurement_email, "email_id")
+		else:
+			sender = frappe.session.user not in STANDARD_USERS and frappe.session.user or None
+
 
 		if preview:
 			return {"message": message, "subject": subject}
@@ -568,35 +573,32 @@ def get_supplier_tag():
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_rfq_containing_supplier(doctype, txt, searchfield, start, page_len, filters):
-	conditions = ""
+	rfq = frappe.qb.DocType("Request for Quotation")
+	rfq_supplier = frappe.qb.DocType("Request for Quotation Supplier")
+
+	query = (
+		frappe.qb.from_(rfq)
+		.from_(rfq_supplier)
+		.select(rfq.name)
+		.distinct()
+		.select(rfq.transaction_date, rfq.company)
+		.where(
+			(rfq.name == rfq_supplier.parent)
+			& (rfq_supplier.supplier == filters.get("supplier"))
+			& (rfq.docstatus == 1)
+			& (rfq.company == filters.get("company"))
+		)
+		.orderby(rfq.transaction_date, order=Order.asc)
+		.limit(page_len)
+		.offset(start)
+	)
+
 	if txt:
-		conditions += "and rfq.name like '%%" + txt + "%%' "
+		query = query.where(rfq.name.like(f"%%{txt}%%"))
 
 	if filters.get("transaction_date"):
-		conditions += "and rfq.transaction_date = '{}'".format(filters.get("transaction_date"))
+		query = query.where(rfq.transaction_date == filters.get("transaction_date"))
 
-	rfq_data = frappe.db.sql(
-		f"""
-		select
-			distinct rfq.name, rfq.transaction_date,
-			rfq.company
-		from
-			`tabRequest for Quotation` rfq, `tabRequest for Quotation Supplier` rfq_supplier
-		where
-			rfq.name = rfq_supplier.parent
-			and rfq_supplier.supplier = %(supplier)s
-			and rfq.docstatus = 1
-			and rfq.company = %(company)s
-			{conditions}
-		order by rfq.transaction_date ASC
-		limit %(page_len)s offset %(start)s """,
-		{
-			"page_len": page_len,
-			"start": start,
-			"company": filters.get("company"),
-			"supplier": filters.get("supplier"),
-		},
-		as_dict=1,
-	)
+	rfq_data = query.run(as_dict=1)
 
 	return rfq_data

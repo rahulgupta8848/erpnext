@@ -20,6 +20,7 @@
   "section_break_5",
   "difference_amount",
   "gain_loss_posting_date",
+  "debit_or_credit_note_posting_date",
   "column_break_7",
   "difference_account",
   "exchange_rate",
@@ -168,6 +169,11 @@
   {
    "fieldname": "dimension_col_break",
    "fieldtype": "Column Break"
+   },
+  {
+   "fieldname": "debit_or_credit_note_posting_date",
+   "fieldtype": "Date",
+   "label": "Debit / Credit Note Posting Date"
   }
  ],
  "is_virtual": 1,
