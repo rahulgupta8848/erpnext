@@ -550,10 +550,6 @@ erpnext.TransactionController = class TransactionController extends erpnext.taxe
 		var me = this;
 		frappe.flags.dialog_set = false;
 
-		}
-	}
-
-	process_item_selection(doc, cdt, cdn) {
 		var item = frappe.get_doc(cdt, cdn);
 		var update_stock = 0, show_batch_dialog = 0;
 
