@@ -121,6 +121,19 @@ frappe.ui.form.on("Work Order", {
 		frm.set_indicator_formatter("operation", function (doc) {
 			return frm.doc.qty == doc.completed_qty ? "green" : "orange";
 		});
+	},
+
+	onload: function (frm) {
+		if (!frm.doc.status) frm.doc.status = "Draft";
+
+		if (frm.doc.__islocal) {
+			frm.set_value({
+				actual_start_date: "",
+				actual_end_date: "",
+			});
+			erpnext.work_order.set_default_warehouse(frm);
+		}
+
 		if (frm.doc.docstatus == 0 && frm.doc.bom_no) {
 			frappe.call({
 				method: "erpnext.manufacturing.doctype.work_order.work_order.check_if_scrap_warehouse_mandatory",
@@ -133,18 +146,6 @@ frappe.ui.form.on("Work Order", {
 					}
 				},
 			});
-		}
-	},
-
-	onload: function (frm) {
-		if (!frm.doc.status) frm.doc.status = "Draft";
-
-		if (frm.doc.__islocal) {
-			frm.set_value({
-				actual_start_date: "",
-				actual_end_date: "",
-			});
-			erpnext.work_order.set_default_warehouse(frm);
 		}
 	},
 

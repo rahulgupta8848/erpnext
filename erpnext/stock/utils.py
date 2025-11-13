@@ -373,7 +373,7 @@ def get_avg_purchase_rate(serial_nos):
 		)[0][0]
 	)
 
-
+@frappe.request_cache
 def get_valuation_method(item_code):
 	"""get valuation method from item or default"""
 	val_method = frappe.db.get_value("Item", item_code, "valuation_method", cache=True)

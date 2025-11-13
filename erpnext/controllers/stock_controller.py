@@ -938,7 +938,9 @@ class StockController(AccountsController):
 		from erpnext.stock.stock_ledger import make_sl_entries
 
 		make_sl_entries(sl_entries, allow_negative_stock, via_landed_cost_voucher)
-		update_batch_qty(self.doctype, self.name, via_landed_cost_voucher=via_landed_cost_voucher)
+		update_batch_qty(
+			self.doctype, self.name, self.docstatus, via_landed_cost_voucher=via_landed_cost_voucher
+		)
 
 	def make_gl_entries_on_cancel(self):
 		cancel_exchange_gain_loss_journal(frappe._dict(doctype=self.doctype, name=self.name))

@@ -697,6 +697,7 @@
   },
   {
    "default": "0",
+   "description": "Upon enabling this, the JV will be submitted for a different exchange rate.",
    "fieldname": "submit_err_jv",
    "fieldtype": "Check",
    "label": "Submit ERR Journals?"
@@ -846,6 +847,7 @@
    "select": 1
   }
  ],
+ "row_format": "Dynamic",
  "show_name_in_global_search": 1,
  "sort_field": "modified",
  "sort_order": "ASC",
