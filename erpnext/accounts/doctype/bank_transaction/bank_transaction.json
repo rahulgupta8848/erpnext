@@ -116,7 +116,7 @@
   {
    "allow_on_submit": 1,
    "fieldname": "reference_number",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Reference Number"
   },
   {
