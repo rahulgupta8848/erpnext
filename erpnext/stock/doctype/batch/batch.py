@@ -217,6 +217,7 @@ def get_batch_qty(
 	batch_no=None,
 	warehouse=None,
 	item_code=None,
+	creation=None,
 	posting_date=None,
 	posting_time=None,
 	ignore_voucher_nos=None,
@@ -243,6 +244,7 @@ def get_batch_qty(
 		{
 			"item_code": item_code,
 			"warehouse": warehouse,
+			"creation": creation,
 			"posting_date": posting_date,
 			"posting_time": posting_time,
 			"batch_no": batch_no,

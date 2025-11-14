@@ -960,7 +960,7 @@ frappe.ui.form.on("Stock Entry Detail", {
 				serial_and_batch_bundle: "",
 			});
 		}
-
+		frm.events.set_basic_rate(frm, cdt, cdn);
 		validate_sample_quantity(frm, cdt, cdn);
 	},
 
