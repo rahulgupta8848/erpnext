@@ -9,7 +9,7 @@ from frappe.contacts.address_and_contact import (
 	load_address_and_contact,
 )
 from frappe.model.document import Document
-from frappe.utils import comma_and, get_link_to_form, validate_iban
+from frappe.utils import comma_and, get_link_to_form
 from frappe.utils.deprecations import deprecated
 
 
