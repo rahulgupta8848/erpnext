@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings, if_app_installed
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, today
 
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import make_test_item
@@ -20,11 +20,11 @@ class TestTerritoryWiseSales(FrappeTestCase):
 	def tearDown(self):
 		frappe.db.rollback()
 
-	@if_app_installed("erpnext_crm")
 	@change_settings("Global Defaults", {"default_currency": "INR"})
 	def test_territory_wise_sales_report_TC_S_221(self):
 		from erpnext_crm.erpnext_crm.doctype.opportunity.opportunity import make_quotation
-
+		if "erpnext_crm" not in frappe.get_installed_apps():
+			return
 		op = self.get_oppoprtunity()
 
 		qo = make_quotation(op.name)

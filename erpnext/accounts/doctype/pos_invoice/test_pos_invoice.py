@@ -6,7 +6,6 @@ import unittest
 
 import frappe
 from frappe import _
-from frappe.tests.utils import change_settings, if_app_installed
 from frappe.utils import cint, flt, getdate, today
 
 from erpnext.accounts.doctype.mode_of_payment.test_mode_of_payment import (
@@ -969,8 +968,9 @@ class TestPOSInvoice(unittest.TestCase):
 			frappe.db.rollback(save_point="before_test_delivered_serial_no_case")
 			frappe.set_user("Administrator")
 
-	@if_app_installed("india_compliance")
 	def test_pos_opening_to_pos_closing_with_possi_and_tax_TC_S_102(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		from erpnext.accounts.doctype.pos_closing_entry.test_pos_closing_entry import init_user_and_profile
 
 		test_user, pos_profile = init_user_and_profile()
@@ -1043,8 +1043,9 @@ class TestPOSInvoice(unittest.TestCase):
 		self.assertEqual(inv.status, "Paid")
 		self.assertEqual(opening_entry.status, "Closed")
 
-	@if_app_installed("india_compliance")
 	def test_pos_inoivce_with_discount_grand_total_TC_S_104(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		from erpnext.accounts.doctype.pos_closing_entry.test_pos_closing_entry import init_user_and_profile
 
 		test_user, pos_profile = init_user_and_profile()
@@ -1070,8 +1071,9 @@ class TestPOSInvoice(unittest.TestCase):
 		self.assertEqual(inv.status, "Paid")
 		self.assertEqual(opening_entry.status, "Closed")
 
-	@if_app_installed("india_compliance")
 	def test_pos_inoivce_with_discount_net_total_TC_S_105(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		from erpnext.accounts.doctype.pos_closing_entry.test_pos_closing_entry import init_user_and_profile
 
 		test_user, pos_profile = init_user_and_profile()
@@ -1097,8 +1099,9 @@ class TestPOSInvoice(unittest.TestCase):
 		self.assertEqual(inv.status, "Paid")
 		self.assertEqual(opening_entry.status, "Closed")
 
-	@if_app_installed("india_compliance")
 	def test_pos_inoivce_with_subscription_TC_S_106(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		from erpnext.accounts.doctype.pos_closing_entry.test_pos_closing_entry import init_user_and_profile
 
 		test_user, pos_profile = init_user_and_profile()
@@ -1124,8 +1127,9 @@ class TestPOSInvoice(unittest.TestCase):
 		self.assertEqual(inv.status, "Paid")
 		self.assertEqual(opening_entry.status, "Closed")
 
-	@if_app_installed("india_compliance")
 	def test_pos_inoivce_with_terms_and_conditions_TC_S_107(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		from erpnext.accounts.doctype.pos_closing_entry.test_pos_closing_entry import init_user_and_profile
 
 		test_user, pos_profile = init_user_and_profile()
@@ -1149,11 +1153,13 @@ class TestPOSInvoice(unittest.TestCase):
 		self.assertEqual(inv.status, "Paid")
 		self.assertEqual(opening_entry.status, "Closed")
 
-	@if_app_installed("india_compliance")
 	def test_pos_invoice_with_manually_redeem_loyalty_points_TC_S_117(self):
 		from erpnext.accounts.doctype.loyalty_program.loyalty_program import (
 			get_loyalty_program_details_with_points,
 		)
+
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 
 		if not frappe.db.exists("Loyalty Program", "Test Single Loyalty"):
 			frappe.get_doc(
@@ -1200,8 +1206,9 @@ class TestPOSInvoice(unittest.TestCase):
 		inv.submit()
 		self.assertEqual(inv.status, "Paid")
 
-	@if_app_installed("india_compliance")
 	def test_pos_inoivce_with_discount_TC_S_118(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		inv = create_pos_invoice(rate=3000, do_not_save=1)
 		inv.taxes_and_charges = "Output GST In-state - _TC"
 		inv.apply_discount_on = "Grand Total"
@@ -1231,8 +1238,9 @@ class TestPOSInvoice(unittest.TestCase):
 		pos_return.submit()
 		self.assertEqual(pos_return.status, "Return")
 
-	@if_app_installed("india_compliance")
 	def test_pos_inoivce_retun_with_taxes_and_charges_TC_S_120(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		inv = create_pos_invoice(rate=3000, do_not_save=1)
 		inv.append(
 			"payments", {"mode_of_payment": "Cash", "account": "Cash - _TC", "amount": inv.grand_total}
