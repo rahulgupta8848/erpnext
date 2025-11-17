@@ -951,7 +951,8 @@ def update_accounting_ledgers_after_reference_removal(
 
 def remove_ref_from_advance_section(ref_doc: object = None, payment_name: str | None = None):
 	# TODO: this might need some testing
-	row_names = []
+	if ref_doc.doctype in ("Sales Invoice", "Purchase Invoice"):
+		row_names = []
 		for adv in ref_doc.get("advances") or []:
 			if adv.get("reference_name", None) == payment_name:
 				row_names.append(adv.name)
