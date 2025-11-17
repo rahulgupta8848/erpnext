@@ -15,7 +15,6 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sal
 from erpnext.accounts.party import get_party_account
 from erpnext.buying.doctype.purchase_order.test_purchase_order import prepare_data_for_internal_transfer
 from erpnext.stock.doctype.item.test_item import create_item
-from frappe.tests.utils import if_app_installed
 
 def make_customer(customer_name, currency=None):
 	if not frappe.db.exists("Customer", customer_name):
@@ -2085,9 +2084,10 @@ class TestAccountsController(FrappeTestCase):
 
 		self.remove_advance_accounts_from_party_master()
 
-	@if_app_installed("projects")
 	def test_company_validation_in_dimension(self):
 		from projects.projects.doctype.project.test_project import make_project
+		if "projects" not in frappe.get_installed_apps():
+			return
 		si = create_sales_invoice(do_not_submit=True)
 		project = make_project({"project_name": "_Test Demo Project1", "company": "_Test Company 1"})
 		si.project = project.name

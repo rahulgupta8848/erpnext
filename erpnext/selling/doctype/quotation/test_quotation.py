@@ -2,7 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings, if_app_installed
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, add_months, flt, getdate, nowdate
 
 from erpnext.controllers.accounts_controller import InvalidQtyError
@@ -1220,7 +1220,6 @@ class TestQuotation(FrappeTestCase):
 		self.assertEqual(sales_order.status, "To Bill")
 		self.assertEqual(purchase_orders[0].status, "Delivered")
 
-	@if_app_installed("india_compliance")
 	def test_quotation_to_po_with_drop_ship_with_GST_TC_S_112(self):
 		from erpnext.buying.doctype.purchase_order.purchase_order import update_status
 		from erpnext.selling.doctype.sales_order.sales_order import make_purchase_order_for_default_supplier
@@ -1230,6 +1229,8 @@ class TestQuotation(FrappeTestCase):
 		)
 		from erpnext.stock.doctype.item.test_item import make_item
 
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		make_item("_Test Item for Drop Shipping", {"is_stock_item": 1, "delivered_by_supplier": 1})
 		so_items = [
 			{
@@ -1286,7 +1287,6 @@ class TestQuotation(FrappeTestCase):
 		self.assertEqual(sales_order.status, "To Bill")
 		self.assertEqual(purchase_orders[0].status, "Delivered")
 
-	@if_app_installed("sales_commission")
 	def test_quotation_to_si_with_pi_and_drop_ship_TC_S_114(self):
 		from erpnext.buying.doctype.purchase_order.purchase_order import (
 			make_purchase_invoice as make_pi_from_po,
@@ -1298,6 +1298,8 @@ class TestQuotation(FrappeTestCase):
 		)
 		from erpnext.stock.doctype.item.test_item import make_item
 
+		if "sales_commission" not in frappe.get_installed_apps():
+			return
 		make_item("_Test Item for Drop Shipping", {"is_stock_item": 1, "delivered_by_supplier": 1})
 		so_items = [
 			{
@@ -1360,7 +1362,6 @@ class TestQuotation(FrappeTestCase):
 		self.assertEqual(si.status, "Unpaid")
 		self.validate_gl_entries(voucher_no=si.name, amount=5000)
 
-	@if_app_installed("india_compliance")
 	def test_quotation_to_si_with_pi_and_drop_ship_with_GST_TC_S_116(self):
 		from erpnext.buying.doctype.purchase_order.purchase_order import (
 			make_purchase_invoice as make_pi_from_po,
@@ -1376,6 +1377,8 @@ class TestQuotation(FrappeTestCase):
 		)
 		from erpnext.stock.doctype.item.test_item import make_item
 
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		make_item("_Test Item for Drop Shipping", {"is_stock_item": 1, "delivered_by_supplier": 1})
 		so_items = [
 			{
@@ -1497,12 +1500,14 @@ class TestQuotation(FrappeTestCase):
 		self.assertEqual(doc.indicator_color, "gray")
 		self.assertEqual(doc.indicator_title, "Expired")
 
-	@if_app_installed("erpnext_crm")
 	def test_lead_to_quotation_TC_S_171(self):
 		from erpnext_crm.erpnext_crm.doctype.lead.lead import make_opportunity
 		from erpnext_crm.erpnext_crm.doctype.lead.test_lead import make_lead
 		from erpnext_crm.erpnext_crm.doctype.opportunity.opportunity import make_quotation
 
+		if "erpnext_crm" not in frappe.get_installed_apps():
+			return
+		
 		if not frappe.db.exists(
 			"Quotation Lost Reason", {"order_lost_reason": "_Test Quotation Lost Reason"}
 		):
@@ -1587,8 +1592,9 @@ class TestQuotation(FrappeTestCase):
 		self.assertEqual(opportunity.status, "Open")
 		self.assertEqual(quotation.status, "Cancelled")
 
-	@if_app_installed("sales_commission")
 	def test_quotation_with_referral_sales_partner_TC_S_172(self):
+		if "sales_commission" not in frappe.get_installed_apps():
+			return
 		if not frappe.db.exists("Sales Partner", "_Test Sales Partner"):
 			frappe.get_doc(
 				{"doctype": "Sales Partner", "partner_name": "_Test Sales Partner", "commission_rate": 10}
@@ -1632,7 +1638,6 @@ class TestQuotation(FrappeTestCase):
 		self.assertEqual(sales_order.status, "To Deliver and Bill")
 		self.assertEqual(sales_order.sales_partner, "_Test Sales Partner")
 
-	@if_app_installed("erpnext_crm")
 	def test_sales_invoice_flow_TC_S_179(self):
 		from erpnext_crm.erpnext_crm.doctype.lead.lead import make_opportunity
 		from erpnext_crm.erpnext_crm.doctype.lead.test_lead import make_lead
@@ -1640,6 +1645,9 @@ class TestQuotation(FrappeTestCase):
 
 		from erpnext.selling.doctype.quotation.quotation import make_sales_invoice
 
+		if "erpnext_crm" not in frappe.get_installed_apps():
+			return
+		
 		if not frappe.db.exists("Tax Category", "In-State"):
 			frappe.get_doc({"doctype": "Tax Category", "title": "In-State"}).insert()
 
@@ -1699,13 +1707,15 @@ class TestQuotation(FrappeTestCase):
 		invoice = make_sales_invoice(quotation.name)
 		self.assertEqual(invoice.items[0].stock_qty, 5.0)
 
-	@if_app_installed("erpnext_crm")
 	def test_customer_from_prospect_TC_S_180(self):
 		from erpnext_crm.erpnext_crm.doctype.lead.lead import make_opportunity
 		from erpnext_crm.erpnext_crm.doctype.lead.test_lead import make_lead
 		from erpnext_crm.erpnext_crm.doctype.opportunity.opportunity import make_quotation
 		from erpnext_crm.erpnext_crm.doctype.prospect.test_prospect import add_lead_to_prospect, make_prospect
 
+		if "erpnext_crm" not in frappe.get_installed_apps():
+			return
+		
 		lead = make_lead()
 		lead.email_id = ""
 		lead.company = "_Test Company"
