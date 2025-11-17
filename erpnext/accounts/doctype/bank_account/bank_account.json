@@ -275,11 +275,7 @@
    "link_fieldname": "default_bank_account"
   }
  ],
-<<<<<<< HEAD
- "modified": "2025-01-23 13:02:40.995541",
-=======
  "modified": "2025-08-29 12:32:01.081687",
->>>>>>> bd3a132868 (feat: set options for IBAN fields (backport #49377) (#49413))
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Account",
