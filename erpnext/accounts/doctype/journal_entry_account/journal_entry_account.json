@@ -106,7 +106,6 @@
    "fieldname": "account_currency",
    "fieldtype": "Link",
    "label": "Account Currency",
-   "no_copy": 1,
    "options": "Currency",
    "print_hide": 1,
    "read_only": 1
@@ -265,7 +264,8 @@
    "label": "Advance Voucher Type",
    "no_copy": 1,
    "options": "DocType",
-   "read_only": 1
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "advance_voucher_no",

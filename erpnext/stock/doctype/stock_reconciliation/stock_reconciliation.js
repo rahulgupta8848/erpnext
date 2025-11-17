@@ -6,7 +6,10 @@ frappe.provide("erpnext.accounts.dimensions");
 
 frappe.ui.form.on("Stock Reconciliation", {
 	setup(frm) {
-		frm.barcode_scanner = new erpnext.utils.BarcodeScanner({ frm });
+		frm.barcode_scanner = new erpnext.utils.BarcodeScanner({
+			frm: frm,
+			uom_field: "stock_uom",
+		});
 	},
 
 	onload: function (frm) {
