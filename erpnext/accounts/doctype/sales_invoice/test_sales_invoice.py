@@ -7794,6 +7794,9 @@ def check_gl_entries(doc, voucher_no, expected_gle, posting_date, voucher_type="
 		)
 		.orderby(gl.posting_date, gl.account, gl.creation)
 	)
+
+	
+
 	gl_entries = q.run(as_dict=True)
 	doc.assertGreater(len(gl_entries), 0)
 	expected_gle = sorted(expected_gle, key=lambda x: x[0])
