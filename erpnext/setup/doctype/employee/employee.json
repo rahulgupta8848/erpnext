@@ -823,11 +823,7 @@
  "image_field": "image",
  "is_tree": 1,
  "links": [],
-<<<<<<< HEAD
-  "modified": "2025-02-07 13:54:40.122345",
-=======
  "modified": "2025-08-29 11:52:12.819878",
->>>>>>> bd3a132868 (feat: set options for IBAN fields (backport #49377) (#49413))
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "Employee",
