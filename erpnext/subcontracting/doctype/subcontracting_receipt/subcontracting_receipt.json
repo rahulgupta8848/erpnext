@@ -641,6 +641,7 @@
    "label": "Raw Materials Actions"
   },
   {
+    "description": "Click this button if you encounter a negative stock error for a serial or batch item. The system will fetch the available serials or batches automatically.",
    "fieldname": "reset_raw_materials_table",
    "fieldtype": "Button",
    "label": "Reset Raw Materials Table"
@@ -734,6 +735,7 @@
  "search_fields": "status, posting_date, supplier",
  "show_name_in_global_search": 1,
  "sort_field": "modified",
+ "row_format": "Dynamic",
  "sort_order": "DESC",
  "states": [],
  "timeline_field": "supplier",

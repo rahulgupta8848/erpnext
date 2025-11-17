@@ -271,12 +271,21 @@ class StockController(AccountsController):
 			return
 
 		child_doctype = self.doctype + " Item"
+		if table_name == "packed_items":
+			field = "parent_detail_docname"
+			child_doctype = "Packed Item"
 		available_dict = available_serial_batch_for_return(
 			field, child_doctype, reference_ids, is_rejected=True
 		)
 
 		for row in self.get(table_name):
-			if data := available_dict.get(row.get(field)):
+			value = row.get(field)
+			if table_name == "packed_items" and row.get("parent_detail_docname"):
+				value = self.get_value_for_packed_item(row)
+				if not value:
+					continue
+
+			if data := available_dict.get(value):
 				qty_field = "rejected_qty"
 				warehouse_field = "rejected_warehouse"
 				if row.get("return_qty_from_rejected_warehouse"):
@@ -335,6 +344,15 @@ class StockController(AccountsController):
 						"incoming_rate", frappe.db.get_value("Serial and Batch Bundle", bundle, "avg_rate")
 					)
 
+
+	def get_value_for_packed_item(self, row):
+		parent_items = self.get("items", {"name": row.parent_detail_docname})
+		if parent_items:
+			ref = parent_items[0].get("dn_detail")
+			return (row.item_code, ref)
+
+		return None
+
 	def get_reference_ids(self, table_name, qty_field=None, bundle_field=None) -> tuple[str, list[str]]:
 		field = {
 			"Sales Invoice": "sales_invoice_item",
@@ -368,6 +386,11 @@ class StockController(AccountsController):
 				and not row.get(bundle_field)
 			):
 				reference_ids.append(row.get(field))
+			if table_name == "packed_items" and row.get("parent_detail_docname"):
+				parent_rows = self.get("items", {"name": row.parent_detail_docname}) or []
+				for d in parent_rows:
+					if d.get(field) and not d.get(bundle_field):
+						reference_ids.append(d.get(field))
 
 		return field, reference_ids
 
