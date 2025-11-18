@@ -286,7 +286,7 @@ class SerialandBatchBundle(Document):
 			}
 		)
 
-		if self.returned_against and self.docstatus == 1:
+		if (self.returned_against or self.voucher_type == "Stock Reconciliation") and self.docstatus == 1:
 			kwargs["ignore_voucher_detail_no"] = self.voucher_detail_no
 
 		if self.docstatus == 1:
@@ -502,12 +502,15 @@ class SerialandBatchBundle(Document):
 				else:
 					d.incoming_rate = abs(flt(sn_obj.batch_avg_rate.get(d.batch_no)))
 
-				available_qty = flt(sn_obj.available_qty.get(d.batch_no), d.precision("qty"))
-				if self.docstatus == 1:
-					available_qty += flt(d.qty, d.precision("qty"))
+				precision = d.precision("qty")
+				for field in ["available_qty", "total_qty"]:
+					value = getattr(sn_obj, field)
+					available_qty = flt(value.get(d.batch_no), precision)
+					if self.docstatus == 1:
+						available_qty += flt(d.qty, precision)
 
-				if not allow_negative_stock:
-					self.validate_negative_batch(d.batch_no, available_qty)
+					if not allow_negative_stock:
+						self.validate_negative_batch(d.batch_no, available_qty)
 
 			d.stock_value_difference = flt(d.qty) * flt(d.incoming_rate)
 
@@ -617,6 +620,17 @@ class SerialandBatchBundle(Document):
 		if not rate and self.voucher_detail_no and self.voucher_no:
 			rate = frappe.db.get_value(child_table, self.voucher_detail_no, valuation_field)
 		
+		is_packed_item = False
+		if rate is None and child_table in ["Delivery Note Item", "Sales Invoice Item"]:
+			rate = frappe.db.get_value(
+				"Packed Item",
+				self.voucher_detail_no,
+				"incoming_rate",
+			)
+
+			if rate is not None:
+				is_packed_item = True
+		
 		stock_queue = []
 		batches = []
 		if prev_sle and prev_sle.stock_queue:
@@ -631,12 +645,20 @@ class SerialandBatchBundle(Document):
 
 			if batches and valuation_method == "FIFO":
 				stock_queue = parse_json(prev_sle.stock_queue)
+			
+		set_valuation_rate_for_rejected_materials = frappe.db.get_single_value(
+			"Buying Settings", "set_valuation_rate_for_rejected_materials"
+		)
+
 
 		for d in self.entries:
-			if self.is_rejected:
+			if self.is_rejected and not set_valuation_rate_for_rejected_materials:
 				rate = 0.0
 			elif (d.incoming_rate == rate) and not stock_queue and d.qty and d.stock_value_difference:
 				continue
+			
+			if is_packed_item and d.incoming_rate:
+				rate = d.incoming_rate
 
 			d.incoming_rate = flt(rate)
 			if d.qty:
@@ -2663,7 +2685,10 @@ def get_stock_ledgers_for_serial_nos(kwargs):
 		else:
 			query = query.where(stock_ledger_entry[field] == kwargs.get(field))
 
-	if kwargs.voucher_no:
+	if kwargs.ignore_voucher_detail_no:
+		query = query.where(stock_ledger_entry.voucher_detail_no != kwargs.ignore_voucher_detail_no)
+
+	elif kwargs.voucher_no:
 		query = query.where(stock_ledger_entry.voucher_no != kwargs.voucher_no)
 
 	return query.run(as_dict=True)

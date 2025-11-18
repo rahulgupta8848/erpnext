@@ -77,7 +77,6 @@
    "options": "Work Order"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "locations",
    "fieldtype": "Table",
    "label": "Item Locations",

@@ -112,6 +112,10 @@ class SubcontractingController(StockController):
 		from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos_for_outward
 		from erpnext.stock.get_item_details import get_filtered_serial_nos
 
+		if self.is_return:
+			return
+
+
 		for row in self.supplied_items:
 			item_details = frappe.get_cached_value(
 				"Item", row.rm_item_code, ["has_batch_no", "has_serial_no"], as_dict=1
@@ -257,6 +261,9 @@ class SubcontractingController(StockController):
 
 		if self.doctype in ["Purchase Order", "Subcontracting Order"] or self.is_new():
 			self.set(self.raw_material_table, [])
+			return
+
+		if not self.get(self.raw_material_table):
 			return
 
 		item_dict = self.__get_data_before_save()
@@ -702,7 +709,8 @@ class SubcontractingController(StockController):
 
 			if use_serial_batch_fields:
 				rm_obj.use_serial_batch_fields = 1
-				self.__set_batch_nos(bom_item, item_row, rm_obj, qty)
+				if not self.flags.get("reset_raw_materials"):
+					self.__set_batch_nos(bom_item, item_row, rm_obj, qty)
 
 		if self.doctype == "Subcontracting Receipt" and not use_serial_batch_fields:
 			args = frappe._dict(
