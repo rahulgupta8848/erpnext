@@ -4,7 +4,6 @@
 import unittest
 
 import frappe
-from frappe.tests.utils import if_app_installed
 from frappe.utils import cint, date_diff, format_date, now_datetime, nowdate
 from frappe.utils.data import add_days, formatdate, today
 
@@ -163,8 +162,9 @@ class TestMaintenanceSchedule(unittest.TestCase):
 
 		frappe.db.rollback()
 
-	@if_app_installed("sales_commission")
 	def test_schedule_with_serials(self):
+		if "sales_commission" not in frappe.get_installed_apps():
+			return
 		# Checks whether serials are automatically updated when changing in items table.
 		# Also checks if other fields trigger generate schdeule if changed in items table.
 		item_code = "_Test Serial Item"

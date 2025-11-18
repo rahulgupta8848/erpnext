@@ -7,7 +7,7 @@ import json
 import frappe
 from frappe import qb
 from frappe.model.dynamic_links import get_dynamic_link_map
-from frappe.tests.utils import FrappeTestCase, change_settings, if_app_installed
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, cint, flt, format_date, getdate, nowdate, today
 import erpnext
 from erpnext.accounts.doctype.account.test_account import create_account, get_inventory_account
@@ -2490,8 +2490,9 @@ class TestSalesInvoice(FrappeTestCase):
 			self.assertEqual(expected_account_values[0], gle.debit)
 			self.assertEqual(expected_account_values[1], gle.credit)
 
-	@if_app_installed("assets")
 	def test_rounding_adjustment_3(self):
+		if "assets" not in frappe.get_installed_apps():
+			return
 		from erpnext.accounts.doctype.accounting_dimension.test_accounting_dimension import (
 			create_dimension,
 			disable_dimension,
@@ -3569,8 +3570,9 @@ class TestSalesInvoice(FrappeTestCase):
 			invoice.reload()
 			self.assertEqual(invoice.status, "Overdue and Discounted")
 
-	@if_app_installed("sales_commission")
 	def test_sales_commission(self):
+		if "sales_commission" not in frappe.get_installed_apps():
+			return
 		si = frappe.copy_doc(test_records[2])
 
 		frappe.db.set_value("Item", si.get("items")[0].item_code, "grant_commission", 1)
@@ -4040,8 +4042,9 @@ class TestSalesInvoice(FrappeTestCase):
 		check_gl_entries(self, pe.name, expected_gle, nowdate(), voucher_type="Payment Entry")
 		set_advance_flag(company="_Test Company", flag=0, default_account="")
 
-	@if_app_installed("india_compliance")
 	def test_pulling_advance_based_on_debit_to(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		from erpnext.accounts.doctype.payment_entry.test_payment_entry import create_payment_entry
 
 		debtors2 = create_account(
@@ -4929,12 +4932,13 @@ class TestSalesInvoice(FrappeTestCase):
 				posting_date=pe.posting_date,
 			)
 
-	@if_app_installed("india_compliance")
 	def test_sales_invoice_without_sales_order_with_gst_TC_S_016(self):
 		from erpnext.stock.doctype.stock_entry.test_stock_entry import make_stock_entry
 		from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
 		from erpnext.stock.utils import get_or_create_fiscal_year
 
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		create_registered_company()
 		get_or_create_fiscal_year("_Test Indian Registered Company")
 		if not frappe.db.exists("Warehouse", "Stores - _TIRC"):
@@ -5058,12 +5062,13 @@ class TestSalesInvoice(FrappeTestCase):
 				)
 				self.assertEqual(dn_acc_debit, 20000)
 
-	@if_app_installed("india_compliance")
 	def test_sales_invoice_with_update_stock_checked_with_gst_TC_S_017(self):
 		from erpnext.stock.doctype.stock_entry.test_stock_entry import make_stock_entry
 		from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
 		from erpnext.stock.utils import get_or_create_fiscal_year
 
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		create_registered_company()
 
 		create_item(
@@ -6448,12 +6453,13 @@ class TestSalesInvoice(FrappeTestCase):
 		si = make_sales_invoice(so.name)
 		self.assertEqual(si.payment_terms_template, "_Test Payment Term Template")
 
-	@if_app_installed("india_compliance")
 	def test_generate_sales_invoice_with_items_different_gst_rates_TC_ACC_131(self):
 		import json
 
 		from erpnext.accounts.doctype.payment_entry.test_payment_entry import make_test_item
 
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		item = make_test_item("_Test GST Item")
 
 		gst_rates = [
@@ -7139,7 +7145,6 @@ class TestSalesInvoice(FrappeTestCase):
 		self.assertEqual(qty_change, 1)
 
 	def test_calculate_commission_for_sales_partner_TC_ACC_143(self):
-		from frappe.tests.utils import if_app_installed
 
 		from erpnext.accounts.doctype.payment_entry.test_payment_entry import make_test_item
 		from erpnext.accounts.utils import get_fiscal_year
@@ -7147,7 +7152,7 @@ class TestSalesInvoice(FrappeTestCase):
 
 		get_or_create_fiscal_year("_Test Company")
 		fiscal_year = get_fiscal_year(nowdate())[0]
-		if if_app_installed("Sales Commission"):
+		if "Sales Commission" in frappe.get_installed_apps():
 			if not frappe.db.exists("Monthly Distribution", "_Test Sales Distribution"):
 				month_distribution = frappe.get_doc(
 					{

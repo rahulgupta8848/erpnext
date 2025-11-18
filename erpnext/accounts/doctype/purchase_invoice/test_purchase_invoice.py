@@ -4,7 +4,7 @@
 
 import frappe
 import frappe.utils
-from frappe.tests.utils import FrappeTestCase, change_settings, if_app_installed
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import (
 	add_days,
 	cint,
@@ -4010,8 +4010,9 @@ class TestPurchaseInvoice(FrappeTestCase, StockTestMixin):
 		pi_total = sum(entry["debit"] for entry in pi_gl_entries)
 		self.assertEqual(pi_total, 10080)
 
-	@if_app_installed("india_compliance")
 	def test_pi_standalone_pi_with_deferred_expense_TC_B_095(self):
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		gst_hsn_code = "11112222"
 		from erpnext.stock.utils import get_or_create_fiscal_year
 
@@ -5275,8 +5276,9 @@ class TestPurchaseInvoice(FrappeTestCase, StockTestMixin):
 		pi.save()
 		self.assertEqual(pi.discount_amount, discount_amount)
 
-	@if_app_installed("projects")
 	def test_validate_available_budget_TC_ACC_292(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		from unittest.mock import patch
 
 		project_name = "test_project" + frappe.generate_hash(length=5)
@@ -5345,8 +5347,9 @@ class TestPurchaseInvoice(FrappeTestCase, StockTestMixin):
 			msg_args, _ = mock_msgprint.call_args
 			self.assertIn("Available Budget Limit Exceeded", msg_args[0])
 
-	@if_app_installed("projects")
 	def test_update_actual_overall_budget_TC_ACC_293(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		project_name = "test_project" + frappe.generate_hash(length=5)
 		if not frappe.db.exists("Project", {"project_name": project_name}):
 			frappe.get_doc(
@@ -5392,8 +5395,9 @@ class TestPurchaseInvoice(FrappeTestCase, StockTestMixin):
 		pi.load_from_db()
 		pi.cancel()
 
-	@if_app_installed("projects")
 	def test_update_locked_actual_overall_budgets_TC_ACC_294(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		project_name = "test_project" + frappe.generate_hash(length=5)
 		if not frappe.db.exists("Project", {"project_name": project_name}):
 			frappe.get_doc(
@@ -5449,8 +5453,9 @@ class TestPurchaseInvoice(FrappeTestCase, StockTestMixin):
 
 		self.assertIn("this WBS is locked", str(cm.exception))
 
-	@if_app_installed("projects")
 	def test_locked_committed_overall_budget_po_to_pi_TC_ACC_295(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_invoice
 		from erpnext.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
 

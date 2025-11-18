@@ -1,7 +1,7 @@
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings, if_app_installed
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, add_months, nowdate, today
 
 from erpnext import get_company_currency
@@ -121,7 +121,6 @@ class TestBlanketOrder(FrappeTestCase):
 		bo = make_blanket_order(blanket_order_type="Purchasing", supplier=supplier, item_code=item_code)
 		self.assertEqual(bo.items[0].party_item_code, "SUPP-PART-1")
 
-	@if_app_installed("india_compliance")
 	def test_blanket_order_to_invoice_TC_B_102(self):
 		# Scenario : BO=>PO=>PR=PI
 		from erpnext.accounts.doctype.payment_entry.test_payment_entry import make_test_item
@@ -129,7 +128,8 @@ class TestBlanketOrder(FrappeTestCase):
 			create_or_get_purchase_taxes_template,
 			get_company_or_supplier,
 		)
-
+		if "india_compliance" not in frappe.get_installed_apps():
+			return
 		data = get_company_or_supplier()
 		company = data.get("company")
 		supplier = data.get("supplier")
