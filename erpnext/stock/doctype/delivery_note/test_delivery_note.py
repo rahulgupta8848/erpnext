@@ -8,7 +8,7 @@ from collections import defaultdict
 import frappe
 from frappe.tests.utils import FrappeTestCase, if_app_installed
 from frappe.utils import add_days, cstr, flt, getdate, nowdate, nowtime, today
-from frappe.tests import change_settings
+from frappe.tests.utils import change_settings
 from erpnext.accounts.doctype.account.test_account import get_inventory_account, make_company
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import create_customer, make_test_item
 from erpnext.accounts.utils import get_balance_on
