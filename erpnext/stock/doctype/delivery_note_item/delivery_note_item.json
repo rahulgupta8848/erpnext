@@ -76,6 +76,7 @@
   "against_sales_invoice",
   "si_detail",
   "dn_detail",
+  "against_pick_list",
   "pick_list_item",
   "section_break_40",
   "pick_serial_and_batch",
@@ -921,6 +922,16 @@
   {
    "fieldname": "column_break_fguf",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "against_pick_list",
+   "fieldtype": "Link",
+   "label": "Against Pick List",
+   "no_copy": 1,
+   "options": "Pick List",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "idx": 1,
