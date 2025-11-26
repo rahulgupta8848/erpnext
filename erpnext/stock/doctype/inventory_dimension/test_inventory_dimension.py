@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
-from frappe.tests.utils import FrappeTestCase, if_app_installed
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import nowdate, nowtime
 
 from erpnext.stock.doctype.delivery_note.test_delivery_note import create_delivery_note
@@ -203,8 +203,9 @@ class TestInventoryDimension(FrappeTestCase):
 
 		self.assertEqual(sle_rack, "Rack 1")
 
-	@if_app_installed("Projects")
 	def test_check_standard_dimensions(self):
+		if "Projects" not in frappe.get_installed_apps():
+			return
 		create_inventory_dimension(
 			reference_document="Project",
 			type_of_transaction="Outward",
@@ -740,13 +741,13 @@ def prepare_data_for_internal_transfer():
 	company = "_Test Company with perpetual inventory"
 
 	customer = create_internal_customer(
-		"_Test Internal Customer 3",
+		"_Test Internal Customer 2",
 		company,
 		company,
 	)
 
 	supplier = create_internal_supplier(
-		"_Test Internal Supplier 3",
+		"_Test Internal Supplier 2",
 		company,
 		company,
 	)

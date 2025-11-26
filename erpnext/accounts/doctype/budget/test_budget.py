@@ -4,7 +4,6 @@
 import unittest
 
 import frappe
-from frappe.tests.utils import if_app_installed
 from frappe.utils import now_datetime, nowdate
 
 from erpnext.accounts.doctype.budget.budget import (
@@ -141,8 +140,9 @@ class TestBudget(unittest.TestCase):
 			pi.submit()
 
 
-	@if_app_installed("projects")
 	def test_monthly_budget_crossed_ignore(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "cost_center")
 
 		budget = make_budget(budget_against="Cost Center",budget_amount=500000)
@@ -162,8 +162,9 @@ class TestBudget(unittest.TestCase):
 		budget.cancel()
 		jv.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_crossed_stop1(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "cost_center")
 
 		budget = make_budget(budget_against="Cost Center")
@@ -183,8 +184,9 @@ class TestBudget(unittest.TestCase):
 		budget.load_from_db()
 		budget.cancel()
 
-	@if_app_installed("projects")
 	def test_exception_approver_role(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "cost_center")
 
 		budget = make_budget(budget_against="Cost Center")
@@ -213,8 +215,9 @@ class TestBudget(unittest.TestCase):
 		if budget.docstatus == 1:
 			budget.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_crossed_for_mr(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		budget = make_budget(
 			applicable_on_material_request=1,
 			applicable_on_purchase_order=1,
@@ -258,8 +261,9 @@ class TestBudget(unittest.TestCase):
 		budget.load_from_db()
 		budget.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_crossed_for_po(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		budget = make_budget(
 			applicable_on_purchase_order=1,
 			action_if_accumulated_monthly_budget_exceeded_on_po="Stop",
@@ -278,8 +282,9 @@ class TestBudget(unittest.TestCase):
 		budget.cancel()
 		po.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_crossed_stop2(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "project")
 
 		budget = make_budget(budget_against="Project")
@@ -302,8 +307,9 @@ class TestBudget(unittest.TestCase):
 		budget.load_from_db()
 		budget.cancel()
 
-	@if_app_installed("projects")
 	def test_yearly_budget_crossed_stop1(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "cost_center")
 
 		budget = make_budget(budget_against="Cost Center")
@@ -320,8 +326,9 @@ class TestBudget(unittest.TestCase):
 		if budget.docstatus == 1:
 			budget.cancel()
 
-	@if_app_installed("projects")
 	def test_yearly_budget_crossed_stop2(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "project")
 
 		budget = make_budget(budget_against="Project")
@@ -341,8 +348,9 @@ class TestBudget(unittest.TestCase):
 		if budget.docstatus == 1:
 			budget.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_on_cancellation1(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "cost_center")
 
 		budget = make_budget(budget_against="Cost Center")
@@ -371,8 +379,9 @@ class TestBudget(unittest.TestCase):
 		budget.load_from_db()
 		budget.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_on_cancellation2(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "project")
 
 		budget = make_budget(budget_against="Project")
@@ -403,8 +412,9 @@ class TestBudget(unittest.TestCase):
 		budget.load_from_db()
 		budget.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_against_group_cost_center(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		set_total_expense_zero(nowdate(), "cost_center")
 		# set_total_expense_zero(nowdate(), "cost_center", "_Test Cost Center 2 - _TC")
 
@@ -424,8 +434,9 @@ class TestBudget(unittest.TestCase):
 		budget.load_from_db()
 		budget.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_against_parent_group_cost_center(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		cost_center = "_Test Cost Center 3 - _TC"
 
 		if not frappe.db.exists("Cost Center", cost_center):
@@ -457,8 +468,9 @@ class TestBudget(unittest.TestCase):
 			budget.cancel()
 		jv.cancel()
 
-	@if_app_installed("projects")
 	def test_monthly_budget_against_main_cost_center(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		from erpnext.accounts.doctype.cost_center.test_cost_center import create_cost_center
 		from erpnext.accounts.doctype.cost_center_allocation.test_cost_center_allocation import (
 			create_cost_center_allocation,

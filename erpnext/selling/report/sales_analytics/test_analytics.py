@@ -3,7 +3,7 @@
 
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, if_app_installed
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, today
 
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import make_test_item
@@ -117,8 +117,9 @@ class TestAnalytics(FrappeTestCase):
 					self.assertEqual(row_7.get("entity"), "__Test Analytics Customer")
 					self.assertEqual(row_7.get("total"), 1000)
 
-	@if_app_installed("projects")
 	def test_sales_analytics_report_with_project_TC_S_216(self):
+		if "projects" not in frappe.get_installed_apps():
+			return
 		so = make_sales_order(
 			customer=self.customer.name,
 			item_code=self.item.item_code,

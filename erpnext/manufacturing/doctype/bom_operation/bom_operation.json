@@ -65,6 +65,7 @@
    "fieldname": "hour_rate",
    "fieldtype": "Currency",
    "label": "Hour Rate",
+   "non_negative": 1,
    "oldfieldname": "hour_rate",
    "oldfieldtype": "Currency",
    "options": "currency",

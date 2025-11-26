@@ -82,6 +82,23 @@ erpnext.buying.SupplierQuotationController = class SupplierQuotationController e
 				__("Get Items From")
 			);
 		}
+
+		this.set_company_filter_for_warehouse(this.frm);
+	}
+	company(frm){
+		var me = this;
+        this.set_company_filter_for_warehouse(this.frm);
+    }
+	set_company_filter_for_warehouse(frm) {
+	    if (frm.doc.company) {
+	        frm.set_query("warehouse", "items", function() {
+	            return {
+	                filters: {
+	                    "company": frm.doc.company
+	                }
+	            };
+	        });
+	    }
 	}
 
 	make_purchase_order() {

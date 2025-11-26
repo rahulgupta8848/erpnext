@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Criterion
 from frappe.utils import flt, getdate
-
+from erpnext.accounts.utils import get_zero_cutoff
 import erpnext
 from erpnext.accounts.report.balance_sheet.balance_sheet import (
 	get_chart_data,
@@ -567,7 +567,7 @@ def prepare_data(accounts, start_date, end_date, balance_must_be, companies, com
 
 			row[company] = flt(d.get(company, 0.0), 3)
 
-			if abs(row[company]) >= 0.005:
+			if abs(row[company]) >= get_zero_cutoff(filters.presentation_currency):
 				# ignore zero values
 				has_value = True
 				total += flt(row[company])

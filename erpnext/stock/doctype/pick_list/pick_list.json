@@ -77,7 +77,6 @@
    "options": "Work Order"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "locations",
    "fieldtype": "Table",
    "label": "Item Locations",
@@ -201,7 +200,7 @@
   },
   {
    "default": "0",
-   "description": "If enabled then system won't override the picked qty / batches / serial numbers.",
+   "description": "If enabled then system won't override the picked qty / batches / serial numbers / warehouse.",
    "fieldname": "pick_manually",
    "fieldtype": "Check",
    "label": "Pick Manually"

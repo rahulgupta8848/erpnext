@@ -2681,7 +2681,7 @@ class TestStockEntry(FrappeTestCase):
 			"batch_number_series": "Test-SABBMRP-Bno.#####",
 			"valuation_rate": 100,
 		}
-		# if if_app_installed("india_compliance"):
+		
 		if frappe.db.has_column("Item", "gst_hsn_code"):
 			fields["gst_hsn_code"] = "01011010"
 
@@ -6262,6 +6262,8 @@ def create_bom(bom_item, rm_items, company=None, qty=None, properties=None):
 	bom.submit()
 
 	return bom
+
+	
 
 
 def make_serialized_item(**args):

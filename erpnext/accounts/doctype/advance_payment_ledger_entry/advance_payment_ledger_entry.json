@@ -13,7 +13,8 @@
      "against_voucher_no",
      "amount",
      "currency",
-     "event"
+     "event",
+     "delinked"
     ],
     "fields": [
      {
@@ -69,7 +70,14 @@
       "label": "Company",
       "options": "Company",
       "read_only": 1
-     }
+      },
+      {
+      "default": "0",
+      "fieldname": "delinked",
+      "fieldtype": "Check",
+      "label": "DeLinked",
+      "read_only": 1
+      }
     ],
     "in_create": 1,
     "index_web_pages_for_search": 1,
@@ -109,6 +117,7 @@
      }
     ],
     "sort_field": "creation",
+    "row_format": "Dynamic",
     "sort_order": "DESC",
     "states": []
    }

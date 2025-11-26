@@ -432,7 +432,7 @@ class TestMaintenanceVisit(unittest.TestCase):
 			},
 		)
 		
-		with self.assertRaises(ValidationError):
+		with self.assertRaises(frappe.ValidationError):
 			mv2.validate_serial_no()
 
 
@@ -551,8 +551,8 @@ def make_maintenance_visit():
 	return mv
 
 def make_sales_person(name):
-	existing_sales_person = frappe.db.get_value("Sales Person", {"sales_person_name": name}, "name")
-	if existing_sales_person:
+	if frappe.db.exists("Sales Person", {"sales_person_name": name}):
+		existing_sales_person = frappe.db.get_value("Sales Person", {"sales_person_name": name}, "name")
 		return frappe.get_doc("Sales Person", existing_sales_person)
 
 	sales_person = frappe.get_doc({

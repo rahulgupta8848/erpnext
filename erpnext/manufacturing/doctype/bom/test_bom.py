@@ -7,7 +7,7 @@ from collections import deque
 from functools import partial
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, if_app_installed, timeout
+from frappe.tests.utils import FrappeTestCase, timeout
 from frappe.utils import cstr, flt
 
 from erpnext.buying.doctype.purchase_order.purchase_order import (
@@ -734,10 +734,10 @@ class TestBOM(FrappeTestCase):
 			else:
 				self.assertEqual(row.is_stock_item, 1)
 
-	@if_app_installed("assets")
 	def test_do_not_include_manufacturing_and_fixed_items(self):
 		from erpnext.manufacturing.doctype.bom.bom import item_query
-
+		if "assets" not in frappe.get_installed_apps():
+			return
 		if not frappe.db.exists("Asset Category", "Computers-Test"):
 			doc = frappe.get_doc({"doctype": "Asset Category", "asset_category_name": "Computers-Test"})
 			doc.flags.ignore_mandatory = True

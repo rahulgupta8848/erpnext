@@ -19,8 +19,7 @@
   "buying_price_list",
   "amended_from",
   "warehouse_section",
-  "scan_barcode",
-  "column_break_13",
+  "last_scanned_warehouse",
   "set_from_warehouse",
   "column_break5",
   "set_warehouse",
@@ -352,10 +351,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "column_break_13",
-   "fieldtype": "Column Break"
-   },
-  {
    "fieldname": "buying_price_list",
    "fieldtype": "Link",
    "label": "Price List",
@@ -368,6 +363,13 @@
    "label": "Total",
    "precision": "3",
    "read_only": 1
+   },
+  {
+   "depends_on": "eval: doc.last_scanned_warehouse",
+   "fieldname": "last_scanned_warehouse",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Last Scanned Warehouse"
   }
  ],
  "icon": "fa fa-ticket",

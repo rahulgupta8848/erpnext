@@ -98,6 +98,15 @@ def get_item_details(args, doc=None, for_validate=False, overwrite_warehouse=Tru
 
 	out.update(get_price_list_rate(args, item))
 
+	if (
+		not out.price_list_rate
+		and args.transaction_type == "selling"
+		and frappe.get_single_value("Selling Settings", "fallback_to_default_price_list")
+	):
+		fallback_args = args.copy()
+		fallback_args.price_list = frappe.get_single_value("Selling Settings", "selling_price_list")
+		out.update(get_price_list_rate(fallback_args, item))
+
 	args.customer = current_customer
 
 	if args.customer and cint(args.is_pos):
@@ -262,10 +271,13 @@ def filter_batches(batches, doc):
 				del batches[row.get("batch_no")]
 
 
-def get_filtered_serial_nos(serial_nos, doc):
+def get_filtered_serial_nos(serial_nos, doc, table=None):
 	from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
 
-	for row in doc.get("items"):
+	if not table:
+		table = "items"
+
+	for row in doc.get(table):
 		if row.get("serial_no"):
 			for serial_no in get_serial_nos(row.get("serial_no")):
 				if serial_no in serial_nos:
@@ -569,20 +581,15 @@ def get_item_warehouse(item, args, overwrite_warehouse, defaults=None):
 			or args.get("warehouse")
 		)
 
-		if not warehouse:
-			defaults = frappe.defaults.get_defaults() or {}
-			warehouse_exists = frappe.db.exists(
-				"Warehouse", {"name": defaults.default_warehouse, "company": args.company}
-			)
-			if defaults.get("default_warehouse") and warehouse_exists:
-				warehouse = defaults.default_warehouse
-
 	else:
 		warehouse = args.get("warehouse")
 
 	if not warehouse:
-		default_warehouse = frappe.db.get_single_value("Stock Settings", "default_warehouse")
-		if frappe.db.get_value("Warehouse", default_warehouse, "company") == args.company:
+		default_warehouse = frappe.get_single_value("Stock Settings", "default_warehouse")
+		if (
+			default_warehouse
+			and frappe.get_cached_value("Warehouse", default_warehouse, "company") == args.company
+		):
 			return default_warehouse
 
 	return warehouse
@@ -697,8 +704,10 @@ def _get_item_tax_template(args, taxes, out=None, for_validate=False):
 	taxes_with_no_validity = []
 
 	for tax in taxes:
-		tax_company = frappe.get_cached_value("Item Tax Template", tax.item_tax_template, "company")
-		if tax_company == args["company"]:
+		disabled, tax_company = frappe.get_cached_value(
+			"Item Tax Template", tax.item_tax_template, ["disabled", "company"]
+		)
+		if not disabled and tax_company == args["company"]:
 			if tax.valid_from or tax.maximum_net_rate:
 				# In purchase Invoice first preference will be given to supplier invoice date
 				# if supplier date is not present then posting date
@@ -741,6 +750,7 @@ def _get_item_tax_template(args, taxes, out=None, for_validate=False):
 			out["item_tax_template"] = tax.item_tax_template
 			return tax.item_tax_template
 	return None
+
 
 
 def is_within_valid_range(args, tax):
@@ -1493,7 +1503,7 @@ def get_valuation_rate(item_code, company, warehouse=None):
 
 		return frappe.db.get_value(
 			"Bin", {"item_code": item_code, "warehouse": warehouse}, ["valuation_rate"], as_dict=True
-		) or {"valuation_rate": 0}
+		) or {"valuation_rate": item.get("valuation_rate") or 0}
 
 	elif not item.get("is_stock_item"):
 		pi_item = frappe.qb.DocType("Purchase Invoice Item")

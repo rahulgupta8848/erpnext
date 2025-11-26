@@ -4,7 +4,7 @@
 
 from json import loads
 from typing import TYPE_CHECKING, Optional
-
+from pypika.functions import Coalesce
 import frappe
 import frappe.defaults
 from frappe import _, qb, throw
@@ -28,7 +28,7 @@ from frappe.utils import (
 from pypika import Order
 from pypika.terms import ExistsCriterion
 from pypika.functions import Min
-
+from collections import defaultdict
 import erpnext
 
 # imported to enable erpnext.accounts.utils.get_account_currency
@@ -36,6 +36,7 @@ from erpnext.accounts.doctype.account.account import get_account_currency
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import get_dimensions
 from erpnext.stock import get_warehouse_account_map
 from erpnext.stock.utils import get_stock_value_on
+from frappe.utils.caching import site_cache
 
 if TYPE_CHECKING:
 	from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import RepostItemValuation
@@ -470,24 +471,14 @@ def reconcile_against_document(
 		reconciled_entries[(row.voucher_type, row.voucher_no)].append(row)
 
 	for key, entries in reconciled_entries.items():
-		voucher_type = key[0]
-		voucher_no = key[1]
+		voucher_type, voucher_no = key
 
 		# cancel advance entry
 		doc = frappe.get_doc(voucher_type, voucher_no)
 		frappe.flags.ignore_party_validation = True
-		repost_whole_ledger = any([x.voucher_detail_no for x in entries])
+	
 
-		# For payments with `Advance` in separate account feature enabled, only new ledger entries are posted for each reference.
-		# No need to cancel/delete payment ledger entries
-		if voucher_type == "Payment Entry" and doc.book_advance_payments_in_separate_party_account:
-			if repost_whole_ledger:
-				doc.make_gl_entries(cancel=1, clearing_date=clearing_date)
-			else:
-				doc.make_advance_gl_entries(cancel=1, clearing_date=clearing_date)
-		else:
-			_delete_pl_entries(voucher_type, voucher_no)
-
+		reposting_rows = []
 		for entry in entries:
 			check_if_advance_entry_modified(entry)
 			validate_allocated_amount(entry)
@@ -496,16 +487,14 @@ def reconcile_against_document(
 
 			# update ref in advance entry
 			if voucher_type == "Journal Entry":
-				referenced_row, update_advance_paid = update_reference_in_journal_entry(
-					entry, doc, do_not_save=False
-				)
+				referenced_row = update_reference_in_journal_entry(entry, doc, do_not_save=False)
 				# advance section in sales/purchase invoice and reconciliation tool,both pass on exchange gain/loss
 				# amount and account in args
 				# referenced_row is used to deduplicate gain/loss journal
-				entry.update({"referenced_row": referenced_row})
+				entry.update({"referenced_row": referenced_row.name})
 				doc.make_exchange_gain_loss_journal([entry], dimensions_dict)
 			else:
-				referenced_row, update_advance_paid = update_reference_in_payment_entry(
+				referenced_row = update_reference_in_payment_entry(
 					entry,
 					doc,
 					do_not_save=True,
@@ -515,19 +504,18 @@ def reconcile_against_document(
 
 				if referenced_row.get("outstanding_amount"):
 					referenced_row.outstanding_amount -= flt(entry.allocated_amount)
+				reposting_rows.append(referenced_row)
 
 		doc.save(ignore_permissions=True)
 		# re-submit advance entry
-		doc = frappe.get_doc(entry.voucher_type, entry.voucher_no)
 
 		if voucher_type == "Payment Entry" and doc.book_advance_payments_in_separate_party_account:
 			# both ledgers must be posted to for `Advance` in separate account feature
 			# TODO: find a more efficient way post only for the new linked vouchers
-			if repost_whole_ledger:
-				doc.make_gl_entries(clearing_date=clearing_date)
-			else:
-				doc.make_advance_gl_entries(clearing_date=clearing_date)
+			for row in reposting_rows:
+				doc.make_advance_gl_entries(entry=row)
 		else:
+			_delete_pl_entries(voucher_type, voucher_no)
 			gl_map = doc.build_gl_map()
 			# Make sure there is no overallocation
 			from erpnext.accounts.general_ledger import process_debit_credit_difference
@@ -545,9 +533,7 @@ def reconcile_against_document(
 				entry.party,
 			)
 		# update advance paid in Advance Receivable/Payable doctypes
-		if update_advance_paid:
-			for t, n in update_advance_paid:
-				frappe.get_doc(t, n).set_total_advance_paid()
+
 
 		frappe.flags.ignore_party_validation = False
 
@@ -629,11 +615,6 @@ def update_reference_in_journal_entry(d, journal_entry, do_not_save=False):
 	"""
 	jv_detail = journal_entry.get("accounts", {"name": d["voucher_detail_no"]})[0]
 
-	# Update Advance Paid in SO/PO since they might be getting unlinked
-	update_advance_paid = []
-	if jv_detail.get("reference_type") in ["Sales Order", "Purchase Order"]:
-		update_advance_paid.append((jv_detail.reference_type, jv_detail.reference_name))
-
 	rev_dr_or_cr = (
 		"debit_in_account_currency"
 		if d["dr_or_cr"] == "credit_in_account_currency"
@@ -686,6 +667,10 @@ def update_reference_in_journal_entry(d, journal_entry, do_not_save=False):
 	new_row.is_advance = cstr(jv_detail.is_advance)
 	new_row.docstatus = 1
 
+	if jv_detail.get("reference_type") in get_advance_payment_doctypes():
+		new_row.advance_voucher_type = jv_detail.get("reference_type")
+		new_row.advance_voucher_no = jv_detail.get("reference_name")
+
 	# will work as update after submit
 	journal_entry.flags.ignore_validate_update_after_submit = True
 	# Ledgers will be reposted by Reconciliation tool
@@ -693,7 +678,7 @@ def update_reference_in_journal_entry(d, journal_entry, do_not_save=False):
 	if not do_not_save:
 		journal_entry.save(ignore_permissions=True)
 
-	return new_row.name, update_advance_paid
+	return new_row
 
 
 def update_reference_in_payment_entry(
@@ -712,19 +697,17 @@ def update_reference_in_payment_entry(
 		"account": d.account,
 		"dimensions": d.dimensions,
 	}
-	update_advance_paid = []
+	advance_payment_doctypes = get_advance_payment_doctypes()
 
 	# Update Reconciliation effect date in reference
-	reconcile_on = get_reconciliation_effect_date(d, payment_entry.company, payment_entry.posting_date)
+	reconcile_on = get_reconciliation_effect_date(
+			d.against_voucher_type, d.against_voucher, payment_entry.company, payment_entry.posting_date
+		)
 	reference_details.update({"reconcile_effect_on": reconcile_on})
 		
 
 	if d.voucher_detail_no:
 		existing_row = payment_entry.get("references", {"name": d["voucher_detail_no"]})[0]
-
-		# Update Advance Paid in SO/PO since they are getting unlinked
-		if existing_row.get("reference_doctype") in ["Sales Order", "Purchase Order"]:
-			update_advance_paid.append((existing_row.reference_doctype, existing_row.reference_name))
 
 		if d.allocated_amount <= existing_row.allocated_amount:
 			existing_row.allocated_amount -= d.allocated_amount
@@ -733,6 +716,9 @@ def update_reference_in_payment_entry(
 			new_row.docstatus = 1
 			for field in list(reference_details):
 				new_row.set(field, reference_details[field])
+			if existing_row.reference_doctype in advance_payment_doctypes:
+				new_row.advance_voucher_type = existing_row.reference_doctype
+				new_row.advance_voucher_no = existing_row.reference_name
 			row = new_row
 	else:
 		new_row = payment_entry.append("references")
@@ -767,22 +753,22 @@ def update_reference_in_payment_entry(
 	payment_entry.flags.ignore_reposting_on_reconciliation = True
 	if not do_not_save:
 		payment_entry.save(ignore_permissions=True)
-	return row, update_advance_paid
+	return row
 
-def get_reconciliation_effect_date(reference, company, posting_date):
+def get_reconciliation_effect_date(against_voucher_type, against_voucher, company, posting_date):
 	reconciliation_takes_effect_on = frappe.get_cached_value(
 		"Company", company, "reconciliation_takes_effect_on"
 	)
+
+	reconcile_on = posting_dat
 
 	if reconciliation_takes_effect_on == "Advance Payment Date":
 		reconcile_on = posting_date
 	elif reconciliation_takes_effect_on == "Oldest Of Invoice Or Advance":
 		date_field = "posting_date"
-		if reference.against_voucher_type in ["Sales Order", "Purchase Order"]:
+		if against_voucher_type in ["Sales Order", "Purchase Order"]:
 			date_field = "transaction_date"
-		reconcile_on = frappe.db.get_value(
-			reference.against_voucher_type, reference.against_voucher, date_field
-		)
+		reconcile_on = frappe.db.get_value(against_voucher_type, against_voucher, date_field)
 		if getdate(reconcile_on) < getdate(posting_date):
 			reconcile_on = posting_date
 	elif reconciliation_takes_effect_on == "Reconciliation Date":
@@ -944,20 +930,46 @@ def update_accounting_ledgers_after_reference_removal(
 		ple_update_query = ple_update_query.where(ple.voucher_no == payment_name)
 	ple_update_query.run()
 
+	# Advance Payment
+	adv = qb.DocType("Advance Payment Ledger Entry")
+	adv_ple = (
+		qb.update(adv)
+		.set(adv.delinked, 1)
+		.set(adv.modified, now())
+		.set(adv.modified_by, frappe.session.user)
+		.where(adv.delinked == 0)
+		.where(
+			((adv.against_voucher_type == ref_type) & (adv.against_voucher_no == ref_no))
+			| ((adv.voucher_type == ref_type) & (adv.voucher_no == ref_no))
+		)
+	)
+	if payment_name:
+		adv_ple = adv_ple.where(adv.voucher_no == payment_name)
 
-def remove_ref_from_advance_section(ref_doc: object = None):
+	adv_ple.run()
+
+
+def remove_ref_from_advance_section(ref_doc: object = None, payment_name: str | None = None):
 	# TODO: this might need some testing
 	if ref_doc.doctype in ("Sales Invoice", "Purchase Invoice"):
-		ref_doc.set("advances", [])
-		adv_type = qb.DocType(f"{ref_doc.doctype} Advance")
-		qb.from_(adv_type).delete().where(adv_type.parent == ref_doc.name).run()
+		row_names = []
+		for adv in ref_doc.get("advances") or []:
+			if adv.get("reference_name", None) == payment_name:
+				row_names.append(adv.name)
 
+		if not row_names:
+			return
+
+		child_table = (
+			"Sales Invoice Advance" if ref_doc.doctype == "Sales Invoice" else "Purchase Invoice Advance"
+		)
+		frappe.db.delete(child_table, {"name": ("in", row_names)})
 
 def unlink_ref_doc_from_payment_entries(ref_doc: object = None, payment_name: str | None = None):
 	remove_ref_doc_link_from_jv(ref_doc.doctype, ref_doc.name, payment_name)
 	remove_ref_doc_link_from_pe(ref_doc.doctype, ref_doc.name, payment_name)
 	update_accounting_ledgers_after_reference_removal(ref_doc.doctype, ref_doc.name, payment_name)
-	remove_ref_from_advance_section(ref_doc)
+	remove_ref_from_advance_section(ref_doc, payment_name)
 
 
 def remove_ref_doc_link_from_jv(
@@ -980,6 +992,8 @@ def remove_ref_doc_link_from_jv(
 			qb.update(jea)
 			.set(jea.reference_type, None)
 			.set(jea.reference_name, None)
+			.set(jea.advance_voucher_type, None)
+			.set(jea.advance_voucher_no, None)
 			.set(jea.modified, now())
 			.set(jea.modified_by, frappe.session.user)
 			.where((jea.reference_type == ref_type) & (jea.reference_name == ref_no))
@@ -1123,6 +1137,28 @@ def get_currency_precision():
 		precision = get_number_format_info(number_format)[2]
 
 	return precision
+
+def get_fraction_units(currency: str) -> int:
+	"""Returns the number of fraction units for a currency."""
+	fraction_units = frappe.db.get_value("Currency", currency, "fraction_units")
+
+	if fraction_units is None:
+		fraction_units = 100
+
+	return fraction_units
+
+
+@site_cache()
+def get_zero_cutoff(currency: str) -> float:
+	"""Returns the zero cutoff for a currency.
+
+	For example, if the Fraction Units for a currency are set to 100, then the zero cutoff is 0.005.
+	We don't want to display values less than the zero cutoff.
+	This value was chosen for compatibility with the previous hard-coded value of 0.005.
+	"""
+	fraction_units = get_fraction_units(currency)
+
+	return 0.5 / (fraction_units or 1)
 
 
 def get_held_invoices(party_type, party):
@@ -1498,6 +1534,10 @@ def _delete_pl_entries(voucher_type, voucher_no):
 	ple = qb.DocType("Payment Ledger Entry")
 	qb.from_(ple).delete().where((ple.voucher_type == voucher_type) & (ple.voucher_no == voucher_no)).run()
 
+def _delete_adv_pl_entries(voucher_type, voucher_no):
+	adv = qb.DocType("Advance Payment Ledger Entry")
+	qb.from_(adv).delete().where((adv.voucher_type == voucher_type) & (adv.voucher_no == voucher_no)).run()
+
 
 def _delete_gl_entries(voucher_type, voucher_no):
 	gle = qb.DocType("GL Entry")
@@ -1759,17 +1799,35 @@ def create_err_and_its_journals(companies: list | None = None) -> None:
 					jv and frappe.get_doc("Journal Entry", jv).submit()
 
 
-def auto_create_exchange_rate_revaluation_daily() -> None:
+def _auto_create_exchange_rate_revaluation_for(frequency: str) -> None:
 	"""
-	Executed by background job
+	Internal helper to avoid code duplication and typos.
+	Fetches companies by frequency and triggers ERR.
 	"""
 	companies = frappe.db.get_all(
 		"Company",
-		filters={"auto_exchange_rate_revaluation": 1, "auto_err_frequency": "Daily"},
+		filters={"auto_exchange_rate_revaluation": 1, "auto_err_frequency": frequency},
 		fields=["name", "submit_err_jv"],
 	)
 	create_err_and_its_journals(companies)
 
+def auto_create_exchange_rate_revaluation_daily() -> None:
+	"""
+	Executed by background job
+	"""
+	_auto_create_exchange_rate_revaluation_for("Daily")
+
+
+
+def get_link_fields_grouped_by_option(doctype):
+	meta = frappe.get_meta(doctype)
+	link_fields_map = defaultdict(list)
+
+	for df in meta.fields:
+		if df.fieldtype == "Link" and df.options and not df.ignore_user_permissions:
+			link_fields_map[df.options].append(df.fieldname)
+
+	return link_fields_map
 
 
 def build_qb_match_conditions(doctype, user=None) -> list:
@@ -1788,6 +1846,10 @@ def build_qb_match_conditions(doctype, user=None) -> list:
 
 				if link_option == doctype:
 					cond = _dt["name"].isin(allowed_values)
+				cond = None
+
+				if link_option == doctype:
+					cond = _dt["name"].isin(allowed_values)
 
 				for fieldname in fieldnames:
 					field = _dt[fieldname]
@@ -1801,29 +1863,21 @@ def build_qb_match_conditions(doctype, user=None) -> list:
 
 	return criterion
 
+def is_immutable_ledger_enabled():
+	return frappe.get_single_value("Accounts Settings", "enable_immutable_ledger")
 
 def auto_create_exchange_rate_revaluation_weekly() -> None:
 	"""
 	Executed by background job
 	"""
-	companies = frappe.db.get_all(
-		"Company",
-		filters={"auto_exchange_rate_revaluation": 1, "auto_err_frequency": "Weekly"},
-		fields=["name", "submit_err_jv"],
-	)
-	create_err_and_its_journals(companies)
+	_auto_create_exchange_rate_revaluation_for("Weekly")
 
 
 def auto_create_exchange_rate_revaluation_monthly() -> None:
 	"""
 	Executed by background job
 	"""
-	companies = frappe.db.get_all(
-		"Company",
-		filters={"auto_exchange_rate_revaluation": 1, "auto_err_frequency": "Montly"},
-		fields=["name", "submit_err_jv"],
-	)
-	create_err_and_its_journals(companies)
+	_auto_create_exchange_rate_revaluation_for("Monthly")
 
 
 def get_payment_ledger_entries(gl_entries, cancel=0):
@@ -1864,6 +1918,10 @@ def get_payment_ledger_entries(gl_entries, cancel=0):
 				if cancel:
 					dr_or_cr *= -1
 					dr_or_cr_account_currency *= -1
+				against_voucher_type = (
+					gle.against_voucher_type if gle.against_voucher_type else gle.voucher_type
+				)
+				against_voucher_no = gle.against_voucher if gle.against_voucher else gle.voucher_no
 
 				ple = frappe._dict(
 					doctype="Payment Ledger Entry",
@@ -1879,14 +1937,12 @@ def get_payment_ledger_entries(gl_entries, cancel=0):
 					voucher_type=gle.voucher_type,
 					voucher_no=gle.voucher_no,
 					voucher_detail_no=gle.voucher_detail_no,
-					against_voucher_type=gle.against_voucher_type
-					if gle.against_voucher_type
-					else gle.voucher_type,
-					against_voucher_no=gle.against_voucher if gle.against_voucher else gle.voucher_no,
+					against_voucher_type=against_voucher_type,
+					against_voucher_no=against_voucher_no,
 					account_currency=gle.account_currency,
 					amount=dr_or_cr,
 					amount_in_account_currency=dr_or_cr_account_currency,
-					delinked=True if cancel else False,
+					delinked=cancel,
 					remarks=gle.remarks,
 				)
 
@@ -1894,9 +1950,36 @@ def get_payment_ledger_entries(gl_entries, cancel=0):
 				if dimensions_and_defaults:
 					for dimension in dimensions_and_defaults[0]:
 						ple[dimension.fieldname] = gle.get(dimension.fieldname)
+				if gle.advance_voucher_no:
+					# create advance entry
+					adv = get_advance_ledger_entry(
+						gle, against_voucher_type, against_voucher_no, dr_or_cr_account_currency, cancel
+					)
+
+					ple_map.append(adv)
 
 				ple_map.append(ple)
 	return ple_map
+
+def get_advance_ledger_entry(gle, against_voucher_type, against_voucher_no, amount, cancel):
+	event = (
+		"Submit"
+		if (against_voucher_type == gle.voucher_type and against_voucher_no == gle.voucher_no)
+		else "Adjustment"
+	)
+	return frappe._dict(
+		doctype="Advance Payment Ledger Entry",
+		company=gle.company,
+		voucher_type=gle.voucher_type,
+		voucher_no=gle.voucher_no,
+		voucher_detail_no=gle.voucher_detail_no,
+		against_voucher_type=gle.advance_voucher_type,
+		against_voucher_no=gle.advance_voucher_no,
+		amount=amount,
+		currency=gle.account_currency,
+		event=event,
+		delinked=cancel,
+	)
 
 
 def create_payment_ledger_entry(
@@ -1910,6 +1993,9 @@ def create_payment_ledger_entry(
 
 			if cancel:
 				delink_original_entry(ple, partial_cancel=partial_cancel)
+				if is_immutable_ledger_enabled():
+					ple.delinked = 0
+					ple.posting_date = frappe.form_dict.get("posting_date") or getdate()
 
 			ple.flags.ignore_permissions = 1
 			ple.flags.adv_adj = adv_adj
@@ -1919,6 +2005,15 @@ def create_payment_ledger_entry(
 
 
 def update_voucher_outstanding(voucher_type, voucher_no, account, party_type, party):
+	from erpnext.accounts.doctype.dunning.dunning import update_linked_dunnings
+	if not voucher_type or not voucher_no:
+		return
+
+	# todo use get advanced dotypes hooks
+	if voucher_type in get_advance_payment_doctypes():
+		ref_doc = frappe.get_lazy_doc(voucher_type, voucher_no)
+		ref_doc.set_total_advance_paid()
+		return
 	ple = frappe.qb.DocType("Payment Ledger Entry")
 	vouchers = [frappe._dict({"voucher_type": voucher_type, "voucher_no": voucher_no})]
 	common_filter = []
@@ -1943,6 +2038,7 @@ def update_voucher_outstanding(voucher_type, voucher_no, account, party_type, pa
 	):
 		outstanding = voucher_outstanding[0]
 		ref_doc = frappe.get_doc(voucher_type, voucher_no)
+		previous_outstanding_amount = ref_doc.outstanding_amount
 		outstanding_amount = flt(
 			outstanding["outstanding_in_account_currency"], ref_doc.precision("outstanding_amount")
 		)
@@ -1955,13 +2051,33 @@ def update_voucher_outstanding(voucher_type, voucher_no, account, party_type, pa
 			"outstanding_amount",
 			outstanding_amount,
 		)
-
+		update_linked_dunnings(ref_doc, previous_outstanding_amount)
 		ref_doc.set_status(update=True)
 		ref_doc.notify_update()
 
 
 def delink_original_entry(pl_entry, partial_cancel=False):
-	if pl_entry:
+	if not pl_entry:
+		return
+
+	if pl_entry.doctype == "Advance Payment Ledger Entry":
+		adv = qb.DocType("Advance Payment Ledger Entry")
+
+		(
+			qb.update(adv)
+			.set(adv.delinked, 1)
+			.set(adv.event, "Cancel")
+			.set(adv.modified, now())
+			.set(adv.modified_by, frappe.session.user)
+			.where(adv.voucher_type == pl_entry.voucher_type)
+			.where(adv.voucher_no == pl_entry.voucher_no)
+			.where(adv.against_voucher_type == pl_entry.against_voucher_type)
+			.where(adv.against_voucher_no == pl_entry.against_voucher_no)
+			.where(adv.event == pl_entry.event)
+			.run()
+		)
+
+	else:
 		ple = qb.DocType("Payment Ledger Entry")
 		query = (
 			qb.update(ple)
@@ -1983,6 +2099,9 @@ def delink_original_entry(pl_entry, partial_cancel=False):
 
 		if partial_cancel:
 			query = query.where(ple.voucher_detail_no == pl_entry.voucher_detail_no)
+		
+		if not is_immutable_ledger_enabled():
+			query = query.set(ple.delinked, True)
 
 		query.run()
 

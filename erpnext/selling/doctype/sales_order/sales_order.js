@@ -35,6 +35,15 @@ frappe.ui.form.on("Sales Order", {
 			};
 		});
 
+		frm.set_query("sales_person", "sales_team", function () {
+			return {
+				filters: {
+					is_group: 0,
+					enabled: 1,
+				},
+			};
+		});
+
 		frm.set_df_property("packed_items", "cannot_add_rows", true);
 		frm.set_df_property("packed_items", "cannot_delete_rows", true);
 	},
@@ -734,8 +743,8 @@ erpnext.selling.SalesOrderController = class SalesOrderController extends erpnex
 						if (internal) {
 							let button_label =
 								me.frm.doc.company === me.frm.doc.represents_company
-									? "Internal Purchase Order"
-									: "Inter Company Purchase Order";
+									? __("Internal Purchase Order")
+									: __("Inter Company Purchase Order");
 
 							me.frm.add_custom_button(
 								button_label,
@@ -789,6 +798,9 @@ erpnext.selling.SalesOrderController = class SalesOrderController extends erpnex
 							docstatus: 1,
 							status: ["!=", "Lost"],
 						},
+						allow_child_item_selection: true,
+						child_fieldname: "items",
+						child_columns: ["item_code", "item_name", "qty", "rate", "amount"],
 					});
 
 					setTimeout(() => {
