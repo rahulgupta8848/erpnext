@@ -3,17 +3,15 @@
 
 frappe.ui.form.on("Supplier Group", {
 	setup: function (frm) {
-		if(cur_frm.doc.supplier_group_name){
 			frm.set_query("parent_supplier_group", function (doc) {
 			
 				return {
 					filters: {
 						is_group: 1,
-						name: ["!=", cur_frm.doc.supplier_group_name],
+						  name: ["!=", ""]
 					},
 				};
 			});
-		}
 
 		frm.set_query("account", "accounts", function (doc, cdt, cdn) {
 			return {
