@@ -2457,6 +2457,8 @@ erpnext.TransactionController = class TransactionController extends erpnext.taxe
 		];
 
 		const me = this;
+		const inspection_type = ["Purchase Receipt", "Purchase Invoice", "Subcontracting Receipt"].includes(this.frm.doc.doctype)
+			? "Incoming" : "Outgoing";
 		const dialog = new frappe.ui.Dialog({
 			title: __("Select Items for Quality Inspection"),
 			size: "extra-large",
@@ -2470,6 +2472,7 @@ erpnext.TransactionController = class TransactionController extends erpnext.taxe
 						doctype: me.frm.doc.doctype,
 						docname: me.frm.doc.name,
 						items: selected_data,
+						inspection_type: inspection_type
 					},
 					freeze: true,
 					callback: function (r) {

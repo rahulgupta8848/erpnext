@@ -159,6 +159,15 @@ class PaymentRequest(Document):
 					).format(self.grand_total, amount)
 				)
 
+	def on_change(self):
+		ref_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
+		advance_payment_doctypes = frappe.get_hooks("advance_payment_receivable_doctypes") + frappe.get_hooks(
+			"advance_payment_payable_doctypes"
+		)
+		if self.reference_doctype in advance_payment_doctypes:
+			# set advance payment status
+			ref_doc.set_advance_payment_status()
+
 	def before_submit(self):
 		if (
 			self.currency != self.party_account_currency
@@ -184,22 +193,25 @@ class PaymentRequest(Document):
 	def on_submit(self):
 		if self.payment_request_type == "Outward":
 			self.db_set("status", "Initiated")
-			return
+			
 		elif self.payment_request_type == "Inward":
 			self.db_set("status", "Requested")
 
-		send_mail = self.payment_gateway_validation() if self.payment_gateway else None
-		ref_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
-		if (
-			hasattr(ref_doc, "order_type") and ref_doc.order_type == "Shopping Cart"
-		) or self.flags.mute_email:
-			send_mail = False
-		if send_mail and self.payment_channel != "Phone":
-			self.set_payment_request_url()
-			self.send_email()
-			self.make_communication_entry()
-		elif self.payment_channel == "Phone":
-			self.request_phone_payment()
+		if self.payment_request_type == "Inward":
+			send_mail = self.payment_gateway_validation() if self.payment_gateway else None
+			ref_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
+
+			if (
+				hasattr(ref_doc, "order_type") and ref_doc.order_type == "Shopping Cart"
+			) or self.flags.mute_email:
+				send_mail = False
+
+			if send_mail and self.payment_channel != "Phone":
+				self.set_payment_request_url()
+				self.send_email()
+				self.make_communication_entry()
+			elif self.payment_channel == "Phone":
+				self.request_phone_payment()
 
 	def request_phone_payment(self):
 		controller = _get_payment_gateway_controller(self.payment_gateway)
@@ -682,9 +694,9 @@ def get_amount(ref_doc, payment_account=None):
 			)
 		else:
 			if ref_doc.party_account_currency == ref_doc.currency:
-				grand_total = flt(ref_doc.outstanding_amount)
+				grand_total = flt(ref_doc.grand_total)
 			else:
-				grand_total = flt(flt(ref_doc.outstanding_amount) / ref_doc.conversion_rate)
+				grand_total = flt(flt(ref_doc.base_grand_total) / ref_doc.conversion_rate)
 	elif dt == "POS Invoice":
 		for pay in ref_doc.payments:
 			if pay.type == "Phone" and pay.account == payment_account:
