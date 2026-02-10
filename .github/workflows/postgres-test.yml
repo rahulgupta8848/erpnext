@@ -75,11 +75,11 @@ jobs:
             --frappe-branch pre-prod \
             ~/frappe-bench
       # ✅ FIX: pkg_resources error
-      - name: Fix setuptools inside bench env
+      - name: Fix pkg_resources (setuptools) for Frappe
         working-directory: /home/runner/frappe-bench
         run: |
-          ./env/bin/pip install --upgrade pip
-          ./env/bin/pip install setuptools==69.5.1
+          bench pip install --upgrade pip
+          bench pip install setuptools wheel
           
       - name: Install Apps
         working-directory: /home/runner/frappe-bench
