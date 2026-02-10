@@ -80,6 +80,11 @@ jobs:
         run: |
           ./env/bin/pip install --upgrade pip
           ./env/bin/pip install setuptools==69.5.1
+      - name: Ensure Dropbox dependency
+        working-directory: /home/runner/frappe-bench
+        run: |
+          ./env/bin/pip install dropbox
+
       - name: Install Apps
         working-directory: /home/runner/frappe-bench
         run: |
