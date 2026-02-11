@@ -74,7 +74,6 @@
   "acc_frozen_upto",
   "ignore_account_closing_balance",
   "use_legacy_controller_for_pcv",
-  "use_legacy_controller_for_pcv",
   "column_break_25",
   "frozen_accounts_modifier",
   "tab_break_dpet",
